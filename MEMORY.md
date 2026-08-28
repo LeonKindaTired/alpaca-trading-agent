@@ -1,1 +1,2 @@
 - [Phase 2: Market Data + Features Completed](PHASE2_SUMMARY.md) — Built feature engine with returns, momentum, SMA, EMA, realized volatility, ATR, volume change, RSI; all handle missing data explicitly; 18 tests passing
+- [Phase 3: Strategy Research Completed](PHASE3_SUMMARY.md) — Researched and implemented 3 strategies: Liquid Momentum (existing), Volatility Mispricing (new), Mean Reversion (new); all use feature engine; tested with mock and live data
