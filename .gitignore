@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.env
+*.db
+data/raw/*
+data/processed/*
+data/backtests/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/backtests/.gitkeep
+.idea/
+.vscode/
