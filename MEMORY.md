@@ -1,0 +1,1 @@
+- [Phase 2: Market Data + Features Completed](PHASE2_SUMMARY.md) — Built feature engine with returns, momentum, SMA, EMA, realized volatility, ATR, volume change, RSI; all handle missing data explicitly; 18 tests passing
