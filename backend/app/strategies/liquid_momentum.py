@@ -17,7 +17,7 @@ class LiquidMomentumStrategy(Strategy):
     """
 
     name = "liquid_momentum"
-    threshold = 0.004
+    threshold = 0.003
 
     def __init__(self, market: MarketDataService, settings: Settings) -> None:
         self.market = market

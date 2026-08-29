@@ -1,0 +1,30 @@
+{
+  "best_parameters": {
+    "threshold": 0.002,
+    "lookback": 5,
+    "analysis_days": 20,
+    "confidence_base": 0.45,
+    "confidence_multiplier": 20.0,
+    "dist_weight": 10.0,
+    "spread_weight": 5.0,
+    "oi_cap": 5000
+  },
+  "performance": {
+    "total_return": 0.7552733496621084,
+    "annualized_return": 0.0002776033195071026,
+    "sharpe_ratio": 2.9175329500020295,
+    "sortino_ratio": 204.95868859177077,
+    "max_drawdown": 0.018724938236005042,
+    "win_rate": 1.0,
+    "profit_factor": 75527.33496621084,
+    "total_trades": 3,
+    "final_equity": 175527.33496621082
+  },
+  "improvement_over_base": {
+    "return": 0.0,
+    "sharpe": 0.0,
+    "max_dd": 0.0,
+    "trades": 0
+  },
+  "test_period": "2026-07-30 to 2026-08-29"
+}

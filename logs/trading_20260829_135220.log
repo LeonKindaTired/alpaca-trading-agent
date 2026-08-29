@@ -1,0 +1,4 @@
+[2026-08-29 13:52:20] Starting trading cycle
+2026-08-29 13:52:22,824 INFO [agent] Connected. equity=100000.0 status=AccountStatus.ACTIVE
+2026-08-29 13:52:23,486 INFO [agent] SPY quote bid=769.25 ask=769.34
+2026-08-29 13:52:23,753 INFO [agent] Account equity=100000.00 buying_power=400000.00 positions=0 trading_enabled=True

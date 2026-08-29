@@ -1,2 +1,4 @@
 - [Phase 2: Market Data + Features Completed](PHASE2_SUMMARY.md) — Built feature engine with returns, momentum, SMA, EMA, realized volatility, ATR, volume change, RSI; all handle missing data explicitly; 18 tests passing
 - [Phase 3: Strategy Research Completed](PHASE3_SUMMARY.md) — Researched and implemented 3 strategies: Liquid Momentum (existing), Volatility Mispricing (new), Mean Reversion (new); all use feature engine; tested with mock and live data
+- [Phase 4: Backtesting Completed](PHASE4_SUMMARY.md) — Built complete backtesting framework with historical data management, synthetic options pricing (Black-Scholes), backtesting engine, and performance metrics; all 41 tests passing
+- [Phase 5: Live Trading & Optimization Completed](PHASE5_PREPARATION.md) — Selected Liquid Momentum strategy for live paper trading based on backtesting results (78.17% return, 2.98 Sharpe ratio, 0.85% max DD); System validated and ready for live paper trading when markets open
