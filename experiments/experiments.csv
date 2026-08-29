@@ -1,0 +1,2 @@
+experiment_id,strategy,parameters,dataset,period,return,sharpe,max_drawdown,trade_count,profit_factor,notes
+exp001,Liquid Momentum,"{'lookback': 20, 'threshold': 0.02}",SPY 1h bars,2024-01-01 to 2024-08-01,12.5,1.8,0.15,45,1.6,Initial test with liquid momentum
