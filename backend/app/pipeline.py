@@ -34,7 +34,8 @@ class TradingLoop:
         self.strategy = LiquidMomentumStrategy(self.market, self.settings)
         self.risk = RiskEngine(self.settings)
         self.execution = ExecutionEngine(client, self.db)
-        self.ai_supervisor = create_ai_supervisor(self.settings)
+        # AI Supervisor: only create if use_ai_supervisor is True
+        self.ai_supervisor = create_ai_supervisor(self.settings) if self.settings.use_ai_supervisor else None
         self.log = setup_logging(self.settings.log_level)
         # Position metadata: contract -> {entry_time, entry_price, thesis, invalidation_conditions, quantity, side}
         self.position_metadata: dict[str, dict] = {}
@@ -278,7 +279,7 @@ class TradingLoop:
         for signal in signals:
             duplicate = bool(signal.contract and self.db.has_open_order(signal.contract))
 
-            # AI Supervisor Evaluation (Phase 6)
+            # AI Supervisor Evaluation (Phase 6) - only if enabled
             ai_decision = None
             if self.ai_supervisor is not None:
                 # Prepare input for AI supervisor

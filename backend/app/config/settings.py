@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     dry_run: bool = Field(default=False)
     ai_enabled: bool = Field(default=False)
+    use_ai_supervisor: bool = Field(default=True)  # Set to False for quant-only mode
 
     # AI-specific parameters
     ai_temperature: float = Field(default=0.3)

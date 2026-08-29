@@ -12,6 +12,7 @@ def init_experiments_file():
             writer.writerow([
                 'experiment_id',
                 'strategy',
+                'mode',  # e.g., 'quant', 'ai', 'mock'
                 'parameters',
                 'dataset',
                 'period',
@@ -23,7 +24,7 @@ def init_experiments_file():
                 'notes'
             ])
 
-def add_experiment(experiment_id, strategy, parameters, dataset, period,
+def add_experiment(experiment_id, strategy, mode, parameters, dataset, period,
                    return_val, sharpe, max_drawdown, trade_count, profit_factor, notes):
     """Add a new experiment to the CSV."""
     init_experiments_file()
@@ -32,6 +33,7 @@ def add_experiment(experiment_id, strategy, parameters, dataset, period,
         writer.writerow([
             experiment_id,
             strategy,
+            mode,
             parameters,
             dataset,
             period,
@@ -60,11 +62,11 @@ def print_experiments():
         return
 
     # Print header
-    headers = ['ID', 'Strategy', 'Return', 'Sharpe', 'Max DD', 'Trades', 'Profit Factor']
-    print(f"{'ID':<12} {'Strategy':<20} {'Return':<10} {'Sharpe':<8} {'Max DD':<10} {'Trades':<8} {'Profit Factor':<12}")
-    print("-" * 90)
+    headers = ['ID', 'Strategy', 'Mode', 'Return', 'Sharpe', 'Max DD', 'Trades', 'Profit Factor']
+    print(f"{'ID':<12} {'Strategy':<20} {'Mode':<8} {'Return':<10} {'Sharpe':<8} {'Max DD':<10} {'Trades':<8} {'Profit Factor':<12}")
+    print("-" * 100)
     for exp in experiments:
-        print(f"{exp['experiment_id']:<12} {exp['strategy']:<20} {float(exp['return']):<10.2f} {float(exp['sharpe']):<8.2f} {float(exp['max_drawdown']):<10.2f} {exp['trade_count']:<8} {float(exp['profit_factor']):<12.2f}")
+        print(f"{exp['experiment_id']:<12} {exp['strategy']:<20} {exp['mode']:<8} {float(exp['return']):<10.2f} {float(exp['sharpe']):<8.2f} {float(exp['max_drawdown']):<10.2f} {exp['trade_count']:<8} {float(exp['profit_factor']):<12.2f}")
 
 if __name__ == "__main__":
     import sys
