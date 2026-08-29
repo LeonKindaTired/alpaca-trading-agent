@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     dry_run: bool = Field(default=False)
+    ai_enabled: bool = Field(default=False)
+
+    # AI-specific parameters
+    ai_temperature: float = Field(default=0.3)
+    ai_max_tokens: int = Field(default=1000)
+    ai_model: str = Field(default="claude-3-5-sonnet-20241022")
 
     @property
     def underlying_list(self) -> list[str]:
