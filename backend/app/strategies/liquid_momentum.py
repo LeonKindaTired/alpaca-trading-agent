@@ -17,7 +17,7 @@ class LiquidMomentumStrategy(Strategy):
     """
 
     name = "liquid_momentum"
-    threshold = 0.003
+    threshold = 0.001
 
     def __init__(self, market: MarketDataService, settings: Settings) -> None:
         self.market = market
@@ -34,7 +34,7 @@ class LiquidMomentumStrategy(Strategy):
 
     def _signal_for(self, underlying: str) -> Signal | None:
         bars = self.market.bars(underlying, days=20)
-        mom = momentum(bars, lookback=5)
+        mom = momentum(bars, lookback=3)
         close = last_close(bars)
         quote = self.market.quote(underlying)
         price = quote.mid or quote.last or close
@@ -77,7 +77,7 @@ class LiquidMomentumStrategy(Strategy):
             direction=direction,
             confidence=min(0.85, 0.45 + abs(mom) * 20),
             thesis=(
-                f"{underlying} 5-day momentum {mom:.2%} -> {right} "
+                f"{underlying} 3-day momentum {mom:.2%} -> {right} "
                 f"{best.contract.symbol} strike {best.contract.strike} exp {best.contract.expiration}"
             ),
             expected_edge=abs(mom),

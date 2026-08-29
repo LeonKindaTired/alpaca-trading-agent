@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from backend.app.ai.base import AISupervisor
-from backend.app.ai.claude_ai import ClaudeAI
+from backend.app.ai.gemini_ai import GeminiAI
 from backend.app.ai.mock_ai import MockAI
 from backend.app.config.settings import Settings
 
@@ -19,14 +19,14 @@ def create_ai_supervisor(settings: Settings) -> Optional[AISupervisor]:
     if not getattr(settings, 'ai_enabled', False):
         return None
 
-    # Try to create ClaudeAI if API key is available
+    # Try to create GeminiAI if API key is available
     try:
         # Check if we have a valid API key
-        api_key = getattr(settings, 'anthropic_api_key', '')
+        api_key = getattr(settings, 'google_api_key', '')
         if api_key and not api_key.startswith("your_"):
-            return ClaudeAI(settings)
+            return GeminiAI(settings)
     except Exception:
-        # If ClaudeAI creation fails, fall back to mock or return None
+        # If GeminiAI creation fails, fall back to mock or return None
         pass
 
     # Fall back to MockAI for development/testing

@@ -16,6 +16,9 @@ from collections import defaultdict
 import json
 
 from backend.app.config.settings import Settings
+
+# Transaction costs
+TRANSACTION_COST_PER_CONTRACT = 1.00  # $1.00 per option contract (round trip)
 from backend.app.data.models import (
     Signal,
     OptionSnapshot,
@@ -196,6 +199,7 @@ class BacktestEngine:
         self.trades: List[BacktestTrade] = []
         self.equity_curve: List[Tuple[datetime, float]] = []
         self.daily_returns: List[float] = []
+        self.strategy: Optional[Strategy] = None
 
     def _create_mock_alpaca_client(self) -> AlpacaClient:
         """
@@ -232,6 +236,9 @@ class BacktestEngine:
         Returns:
             BacktestResults object with performance metrics
         """
+        # Store strategy for exit logic
+        self.strategy = strategy
+
         # Reset state
         self._reset_state(initial_capital)
 
@@ -317,6 +324,7 @@ class BacktestEngine:
         self.trades.clear()
         self.equity_curve.clear()
         self.daily_returns.clear()
+        self.strategy = None
 
         # Start with initial capital
         self.equity_curve.append((datetime.min, initial_capital))
@@ -429,20 +437,58 @@ class BacktestEngine:
             # Calculate time-based exit
             hours_open = (current_time - position.entry_time).total_seconds() / 3600.0
 
-            # Simple exit logic: close after 5 days or if we get an opposing signal
-            # In a more sophisticated implementation, we'd check for exit signals from the strategy
-            if hours_open >= 120:  # 5 days * 24 hours
-                positions_to_close.append((contract_symbol, "time_exit"))
-                continue
+            # Check for exit signals from the strategy
+            exit_reason = None
 
-            # For demonstration, we'll also simulate occasional exits based on random walk
-            # In reality, this would be replaced with actual signal-based exit logic
-            import hashlib
-            hash_input = f"{contract_symbol}{current_time.strftime('%Y%m%d')}"
-            hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
-            if hash_value % 100 < 5:  # 5% chance of exit each day
-                positions_to_close.append((contract_symbol, "random_exit"))
-                continue
+            # Generate signals using the strategy
+            if hasattr(self, 'strategy') and self.strategy is not None:
+                try:
+                    market_state = self._create_market_state(symbol_data)
+                    exit_signals = self.strategy.generate_signals(market_state)
+
+                    # Check for opposing signals
+                    for signal in exit_signals:
+                        # For long positions, exit on short signal
+                        # For short positions, exit on long signal
+                        if position.direction == "long" and signal.direction == "short":
+                            exit_reason = "signal_reversal"
+                            break
+                        elif position.direction == "short" and signal.direction == "long":
+                            exit_reason = "signal_reversal"
+                            break
+                except Exception as e:
+                    print(f"Error generating exit signals for {contract_symbol} at {current_time}: {e}")
+
+            # Check for stop-loss and take-profit based on unrealized P&L
+            if exit_reason is None and underlying_price is not None and position.entry_price > 0:
+                # Calculate unrealized P&L percentage
+                if position.direction == "long":
+                    unrealized_pnl_pct = (underlying_price - position.entry_price) / position.entry_price
+                else:  # short
+                    unrealized_pnl_pct = (position.entry_price - underlying_price) / position.entry_price
+                
+                # Stop-loss: exit if loss exceeds 20%
+                if unrealized_pnl_pct <= -0.20:
+                    exit_reason = "stop_loss"
+                # Take-profit: exit if profit exceeds 30%
+                elif unrealized_pnl_pct >= 0.30:
+                    exit_reason = "take_profit"
+            # If no signal-based exit, use time-based exit as fallback
+            if exit_reason is None:
+                # Time-based exit: close after 10 days (increased from 5 days for more trading opportunities)
+                if hours_open >= 240:  # 10 days * 24 hours
+                    exit_reason = "time_exit"
+                else:
+                    # Small random exit chance to simulate unexpected events (reduced from 5% to 1%)
+                    import hashlib
+                    hash_input = f"{contract_symbol}{current_time.strftime('%Y%m%d')}"
+                    hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
+                    if hash_value % 100 < 1:  # 1% chance of exit each day
+                        exit_reason = "random_exit"
+
+            # If we have an exit reason, add to positions to close
+            if exit_reason is not None:
+                positions_to_close.append((contract_symbol, exit_reason))
 
         # Close positions that meet exit criteria
         for contract_symbol, exit_reason in positions_to_close:
@@ -488,6 +534,10 @@ class BacktestEngine:
             pnl = (exit_price - position.entry_price) * position.quantity * 100  # Options multiplier
         else:  # short
             pnl = (position.entry_price - exit_price) * position.quantity * 100
+
+        # Subtract transaction costs (round trip)
+        transaction_cost = TRANSACTION_COST_PER_CONTRACT * position.quantity
+        pnl -= transaction_cost
 
         pnl_percent = pnl / (position.entry_price * position.quantity * 100) if position.entry_price > 0 else 0
 
