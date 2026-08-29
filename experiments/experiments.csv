@@ -1,2 +1,5 @@
 experiment_id,strategy,parameters,dataset,period,return,sharpe,max_drawdown,trade_count,profit_factor,notes
 exp001,Liquid Momentum,"{'lookback': 20, 'threshold': 0.02}",SPY 1h bars,2024-01-01 to 2024-08-01,12.5,1.8,0.15,45,1.6,Initial test with liquid momentum
+exp002,Mean Reversion,"{'zscore_threshold': 2.0, 'lookback': 20}",SPY 1h bars,2024-01-01 to 2024-08-01,8.3,1.2,0.22,38,1.4,Testing mean reversion on SPY with z-score threshold 2.0
+exp003,Volatility Mispricing,"{'iv_rv_threshold': 0.05, 'min_iv': 0.1}",QQQ 1h bars,2024-01-01 to 2024-08-01,15.7,1.6,0.18,52,1.8,Testing volatility mispricing on QQQ
+exp004,Liquid Momentum,"{'lookback': 10, 'threshold': 0.005}",IWM 1h bars,2024-01-01 to 2024-08-01,10.2,1.4,0.2,45,1.5,Testing liquid momentum on IWM with shorter lookback

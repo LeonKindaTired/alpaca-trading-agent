@@ -36,6 +36,50 @@ def get_db_connection():
     settings = get_settings()
     return sqlite3.connect(settings.database_path)
 
+def get_system_status(key: str):
+    """Get a system status value by key."""
+    try:
+        conn = get_db_connection()
+        row = conn.execute(
+            "SELECT value FROM system_status WHERE key = ?",
+            (key,),
+        ).fetchone()
+        conn.close()
+        if row is None:
+            return None
+        try:
+            return json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            return row[0]
+    except Exception:
+        return None
+
+# Load data
+journal_df = None
+orders_df = None
+account_info = None
+positions = None
+trading_halted = False
+shutdown_reason = ""
+
+try:
+    # Check system status for trading halt
+    trading_halted = get_system_status('trading_halted') or False
+    if isinstance(trading_halted, str):
+        trading_halted = trading_halted.lower() == 'true'
+    shutdown_reason = get_system_status('shutdown_reason') or ""
+    if shutdown_reason is None:
+        shutdown_reason = ""
+except Exception:
+    trading_halted = False
+    shutdown_reason = ""
+
+# Show shutdown banner if halted
+if trading_halted and shutdown_reason:
+    st.error(f"**TRADING HALTED**: {shutdown_reason}")
+elif trading_halted:
+    st.warning("**TRADING HALTED**: Autonomous trading has been halted (no reason provided)")
+
 def load_journal_data():
     """Load decision journal data."""
     try:
@@ -314,8 +358,8 @@ with tab3:
         journal_display['AI Decision'] = journal_display.apply(extract_ai_decision, axis=1)
         journal_display['AI Confidence'] = journal_display.apply(extract_ai_confidence, axis=1)
         journal_display['Risk Approved'] = journal_display.apply(extract_risk_approved, axis=1)
-        journal_display['Timestamp'] = pd.to_datetime(journal_display['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-        journal_display['Underlying'] = journal_display['underlying'].fillna('-')
+        journal_display['Timestamp'] = pd.to_datetime(journal_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        journal_display['Underlying'] = journal_df['underlying'].fillna('-')
 
         # Display relevant columns
         display_cols = ['Timestamp', 'Underlying', 'AI Decision', 'AI Confidence', 'Risk Approved']
@@ -370,6 +414,9 @@ with tab4:
                         st.markdown("**Invalidation Conditions:**")
                         for condition in ai_data['invalidation_conditions']:
                             st.markdown(f"• {condition}")
+                else:
+                    st.markdown("**AI Decision:**")
+                    st.markdown("N/A")
             except Exception as e:
                 st.markdown("**AI Decision:**")
                 st.markdown("Error parsing AI decision")

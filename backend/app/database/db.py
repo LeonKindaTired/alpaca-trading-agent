@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TEXT NOT NULL,
     payload TEXT
 );
+
+CREATE TABLE IF NOT EXISTS system_status (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT
+);
 """
 
 
@@ -83,6 +89,30 @@ class Database:
         )
         self._conn.commit()
         return int(cur.lastrowid)
+
+    def set_system_status(self, key: str, value: Any) -> None:
+        """Set a system status key-value pair."""
+        self._conn.execute(
+            """
+            INSERT OR REPLACE INTO system_status (key, value, updated_at)
+            VALUES (?, ?, ?)
+            """,
+            (key, _dump(value), datetime.now(timezone.utc).isoformat()),
+        )
+        self._conn.commit()
+
+    def get_system_status(self, key: str) -> Any:
+        """Get a system status value by key."""
+        row = self._conn.execute(
+            "SELECT value FROM system_status WHERE key = ?",
+            (key,),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            return json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            return row[0]
 
     def record_order(
         self,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -35,10 +36,197 @@ class TradingLoop:
         self.execution = ExecutionEngine(client, self.db)
         self.ai_supervisor = create_ai_supervisor(self.settings)
         self.log = setup_logging(self.settings.log_level)
+        # Position metadata: contract -> {entry_time, entry_price, thesis, invalidation_conditions, quantity, side}
+        self.position_metadata: dict[str, dict] = {}
+        self.max_position_hours = getattr(self.settings, 'max_position_hours', 24.0)
+        # Shutdown tracking
+        self._daily_starting_equity: float | None = None
+        self._daily_start_date: datetime.date | None = None
+        self._peak_equity: float | None = None
+        self._consecutive_failures: int = 0
+        self._shutdown_reason: str | None = None
+        self._trading_halted: bool = False  # if True, no new positions but still monitor existing
+
+    def _update_position_metadata(self, contract: str, order, position, signal, ai_decision):
+        """Store metadata for a newly opened position."""
+        entry_price = None
+        if order and hasattr(order, 'filled_avg_price') and order.filled_avg_price is not None:
+            entry_price = float(order.filled_avg_price)
+        elif position and hasattr(position, 'avg_entry_price') and position.avg_entry_price is not None:
+            entry_price = float(position.avg_entry_price)
+        else:
+            # Fallback to current mid price
+            snap = self.market.option_snapshot(contract)
+            if snap and snap.quote and snap.quote.mid is not None:
+                entry_price = float(snap.quote.mid)
+            else:
+                entry_price = 0.0
+
+        metadata = {
+            'entry_time': datetime.datetime.now(datetime.timezone.utc),
+            'entry_price': entry_price,
+            'thesis': getattr(signal, 'thesis', ''),
+            'invalidation_conditions': getattr(ai_decision, 'invalidation_conditions', []) if ai_decision else [],
+            'quantity': float(getattr(position, 'qty', 0)) if position else 0.0,
+            'side': getattr(position, 'side', 'buy') if position else 'buy',
+        }
+        self.position_metadata[contract] = metadata
+        self.log.info(
+            "Stored metadata for position %s: entry_price=%.4f, thesis=%s",
+            contract, entry_price, metadata['thesis'][:50]
+        )
+
+    def _remove_position_metadata(self, contract: str):
+        """Remove metadata when position is closed."""
+        if contract in self.position_metadata:
+            del self.position_metadata[contract]
+            self.log.info("Removed metadata for position %s", contract)
+
+    def _evaluate_exit_conditions(self, contract: str, position, metadata: dict) -> tuple[bool, str]:
+        """Evaluate whether to exit a position based on stop loss, time, and invalidation conditions.
+        Returns (should_exit, reason).
+        """
+        if not position or not metadata:
+            return False, ""
+
+        # Get current option price
+        snap = self.market.option_snapshot(contract)
+        if not snap or not snap.quote or snap.quote.mid is None:
+            return False, "Unable to get current quote"
+
+        current_price = float(snap.quote.mid)
+        entry_price = float(metadata['entry_price'])
+        qty = float(metadata['quantity'])
+
+        # Stop loss: exit if option price drops below 50% of entry price
+        if entry_price > 0 and current_price <= entry_price * 0.5:
+            return True, f"Stop loss triggered: {current_price:.4f} <= {entry_price * 0.5:.4f} (50% of entry)"
+
+        # Time-based exit: exit if position open longer than max_position_hours
+        entry_time = metadata['entry_time']
+        if entry_time.tzinfo is None:
+            entry_time = entry_time.replace(tzinfo=datetime.timezone.utc)
+        hours_open = (datetime.datetime.now(datetime.timezone.utc) - entry_time).total_seconds() / 3600.0
+        if hours_open > self.max_position_hours:
+            return True, f"Time-based exit: {hours_open:.1f} hours > {self.max_position_hours:.1f} hours"
+
+        # TODO: Evaluate invalidation conditions based on market data (e.g., underlying price thresholds)
+        # For simplicity, we skip complex condition evaluation here.
+
+        return False, ""
+
+    def _manage_positions(self, positions):
+        """Manage open positions: evaluate exit conditions and submit exit orders if needed."""
+        for pos in positions:
+            contract = getattr(pos, 'symbol', None)
+            if not contract:
+                continue
+            metadata = self.position_metadata.get(contract)
+            if metadata is None:
+                # No metadata, maybe we opened position before metadata tracking started; skip for now
+                continue
+
+            should_exit, reason = self._evaluate_exit_conditions(contract, pos, metadata)
+            if should_exit:
+                self.log.info("Exit condition met for %s: %s", contract, reason)
+                # Submit sell order to close long position
+                qty = metadata['quantity']
+                side = "sell"  # assuming we are long (bought) the option
+                internal_id = f"agt-exit-{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d%H%M%S%f')}"
+                try:
+                    order = self.client.submit_market_order(
+                        symbol=contract,
+                        qty=qty,
+                        side=side,
+                        internal_id=internal_id,
+                    )
+                    self.log.info(
+                        "EXIT order submitted %s qty=%s status=%s alpaca_id=%s",
+                        contract, qty, order.status, getattr(order, 'alpaca_id', None)
+                    )
+                    # Record exit order in DB (optional)
+                    # We could also journal the exit, but for simplicity we just log.
+                except Exception as e:
+                    self.log.error("Failed to submit exit order for %s: %s", contract, e)
+                # Remove metadata after exit order submitted (position will be closed asynchronously)
+                self._remove_position_metadata(contract)
+
+    def _check_shutdown_conditions(self, account) -> str | None:
+        """Check if any automatic shutdown conditions are met.
+        Returns reason string if shutdown should be triggered, else None.
+        """
+        # Reset daily starting equity if new day
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+        if self._daily_starting_equity is None or self._daily_start_date != today:
+            self._daily_starting_equity = account.equity
+            self._daily_start_date = today
+            self.log.info(
+                "Reset daily starting equity to %.2f for %s",
+                self._daily_starting_equity,
+                today.isoformat(),
+            )
+
+        # Update peak equity
+        if self._peak_equity is None or account.equity > self._peak_equity:
+            self._peak_equity = account.equity
+
+        # Compute daily loss and drawdown
+        daily_loss = 0.0
+        if self._daily_starting_equity is not None and self._daily_starting_equity > 0:
+            daily_loss = (self._daily_starting_equity - account.equity) / self._daily_starting_equity
+
+        drawdown = 0.0
+        if self._peak_equity is not None and self._peak_equity > 0:
+            drawdown = (self._peak_equity - account.equity) / self._peak_equity
+
+        # Check thresholds
+        if daily_loss > self.settings.max_daily_loss:
+            return f"Daily loss {daily_loss:.2%} exceeds max {self.settings.max_daily_loss:.2%}"
+        if drawdown > self.settings.max_drawdown:
+            return f"Drawdown {drawdown:.2%} exceeds max {self.settings.max_drawdown:.2%}"
+
+        # Consecutive failures checked elsewhere; we just return the reason if already set
+        if self._shutdown_reason is not None:
+            return self._shutdown_reason
+
+        return None
+
+    def _record_success(self):
+        """Record a successful operation (reset failure counter)."""
+        if self._consecutive_failures > 0:
+            self.log.info(
+                "Successful operation after %d consecutive failures",
+                self._consecutive_failures,
+            )
+        self._consecutive_failures = 0
+
+    def _record_failure(self, exc: Exception | None = None):
+        """Record a failure, increment counter, and possibly trigger shutdown."""
+        self._consecutive_failures += 1
+        self.log.warning(
+            "Consecutive failure %d/%d",
+            self._consecutive_failures,
+            self.settings.max_consecutive_failures,
+        )
+        if self._consecutive_failures >= self.settings.max_consecutive_failures:
+            self._shutdown_reason = (
+                f"Consecutive failures {self._consecutive_failures} >= max {self.settings.max_consecutive_failures}"
+            )
+            self.log.error("Shutdown triggered: %s", self._shutdown_reason)
 
     def run_once(self, *, submit: bool = True) -> CycleResult:
-        account = self.client.get_account()
-        positions = self.client.list_positions()
+        # Fetch account and positions, catching any connection/market data failures
+        try:
+            account = self.client.get_account()
+            positions = self.client.list_positions()
+            self._record_success()
+        except Exception as e:
+            self._record_failure(e)
+            # If we cannot get basic account info, we cannot continue meaningfully.
+            # Still return a minimal result to avoid breaking the loop.
+            self.log.error("Failed to fetch account/positions: %s", e)
+            return CycleResult(account={}, signals=[], actions=[])
+
         self.log.info(
             "Account equity=%.2f buying_power=%.2f positions=%d trading_enabled=%s",
             account.equity,
@@ -46,6 +234,35 @@ class TradingLoop:
             len(positions),
             self.settings.trading_enabled,
         )
+
+        # Check for automatic shutdown conditions (daily loss, drawdown, consecutive failures)
+        shutdown_reason = self._check_shutdown_conditions(account)
+        if shutdown_reason is not None:
+            if not self._trading_halted:
+                self._shutdown_reason = shutdown_reason
+                self._trading_halted = True
+                self.log.warning("Trading halted due to: %s", shutdown_reason)
+                # Persist shutdown status
+                self.db.set_system_status('trading_halted', True)
+                self.db.set_system_status('shutdown_reason', shutdown_reason)
+            # Update status even if already halted (in case reason changed?)
+            self.db.set_system_status('shutdown_reason', shutdown_reason)
+        else:
+            # No shutdown condition; ensure we are not halted
+            if self._trading_halted:
+                self._trading_halted = False
+                self._shutdown_reason = None
+                self.log.info("Trading resumed - shutdown conditions cleared")
+                # Persist that trading is not halted
+                self.db.set_system_status('trading_halted', False)
+                self.db.set_system_status('shutdown_reason', "")
+            else:
+                # Ensure we have cleared any previous status
+                self.db.set_system_status('trading_halted', False)
+                self.db.set_system_status('shutdown_reason', "")
+
+        # Manage existing positions (exits) - always run, regardless of trading halted
+        self._manage_positions(positions)
 
         # Prepare market state for AI evaluation
         market_state = {
@@ -148,7 +365,9 @@ class TradingLoop:
                 "approved": decision.approved,
                 "reasons": decision.reasons,
             }
-            if decision.approved and submit:
+            # Determine if we should submit new orders: only if trading not halted and submit flag is True
+            effective_submit = submit and (not self._trading_halted) and self.settings.trading_enabled
+            if decision.approved and effective_submit:
                 order = self.execution.execute(effective_signal, decision)
                 position = self.client.get_position(effective_signal.contract) if effective_signal.contract else None
                 record["order"] = order.model_dump(mode="json")
@@ -160,12 +379,28 @@ class TradingLoop:
                     order.status,
                     order.alpaca_id,
                 )
+                # Store metadata for new position
+                if position:
+                    self._update_position_metadata(effective_signal.contract, order, position, effective_signal, ai_decision)
             else:
-                self.log.info(
-                    "TRADE REJECTED %s reasons=%s",
-                    effective_signal.contract,
-                    "; ".join(decision.reasons),
-                )
+                if not self.settings.trading_enabled:
+                    self.log.info(
+                        "TRADE REJECTED %s reasons=%s (trading disabled via kill switch)",
+                        effective_signal.contract,
+                        "; ".join(decision.reasons),
+                    )
+                elif self._trading_halted:
+                    self.log.info(
+                        "TRADE REJECTED %s reasons=%s (trading halted due to shutdown condition)",
+                        effective_signal.contract,
+                        "; ".join(decision.reasons),
+                    )
+                else:
+                    self.log.info(
+                        "TRADE REJECTED %s reasons=%s",
+                        effective_signal.contract,
+                        "; ".join(decision.reasons),
+                    )
 
             self.db.journal(
                 underlying=effective_signal.underlying,
@@ -182,7 +417,8 @@ class TradingLoop:
                 result=record.get("position") or {"rejected": not decision.approved, "reasons": decision.reasons},
             )
             actions.append(record)
-            if decision.approved and submit:
+            if decision.approved and effective_submit:
+                # Refresh positions after order submission
                 positions = self.client.list_positions()
 
         if not signals:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,6 +30,7 @@ class Settings(BaseSettings):
     min_dte: int = 3
     max_dte: int = 45
     loop_interval_seconds: int = 60
+    max_consecutive_failures: int = 5
 
     underlyings: str = "SPY,QQQ,IWM"
     database_path: str = "data/agent.db"
