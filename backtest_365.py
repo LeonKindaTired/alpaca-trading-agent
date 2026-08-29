@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Debug script to see how many signals are generated each day.
+Run a 365-day backtest to see how many trades we get.
 """
 
 import sys
@@ -16,6 +16,7 @@ from backend.app.config.settings import Settings
 from backend.app.data.mock_alpaca import MockAlpacaClient
 from backend.app.data.market_data import MarketDataService
 from backend.app.strategies.liquid_momentum import LiquidMomentumStrategy
+from backend.backtesting.engine import BacktestEngine
 
 
 class HistoricalMockAlpacaClient(MockAlpacaClient):
@@ -70,8 +71,7 @@ class HistoricalMockAlpacaClient(MockAlpacaClient):
         # Return the last 'days' worth of price data as bars
         start_idx = max(0, len(self._price_history[symbol]) - days)
         price_slice = self._price_history[symbol][start_idx:]
-        # We don't have changes_slice in the original, but we need to generate bars
-        # Let's simplify and just use the price_slice to create bars with dummy OHLC
+
         bars = []
         base_time = datetime.now() - timedelta(days=len(price_slice))
 
@@ -109,11 +109,11 @@ def create_historical_market_data_service() -> MarketDataService:
 
 
 def main():
-    print("=== Debugging Signal Generation ===\n")
+    print("=== Running 365-Day Backtest ===\n")
 
-    # Use a short date range for quick testing (10 days)
+    # Use a 365-day date range
     end_date = date.today()
-    start_date = end_date - timedelta(days=10)
+    start_date = end_date - timedelta(days=365)
 
     print(f"Backtesting from {start_date} to {end_date}")
     print(f"Period: {(end_date - start_date).days} days\n")
@@ -139,25 +139,40 @@ def main():
     # Create strategy
     strategy = LiquidMomentumStrategy(market_data, settings)
 
-    # We'll simulate the backtest loop manually to see signals
-    current_date = start_date
-    delta = timedelta(days=1)
-    total_signals = 0
+    # Initialize backtest engine
+    backtest_engine = BacktestEngine(settings=settings)
 
-    while current_date <= end_date:
-        print(f"--- Date: {current_date} ---")
-        # Generate market state for the strategy (simplified)
-        # In reality, we would pass market_state to generate_signals, but the strategy ignores it
-        # So we just call generate_signals with an empty market state
-        signals = strategy.generate_signals({})
-        print(f"  Signals generated: {len(signals)}")
-        for signal in signals:
-            print(f"    {signal.underlying} {signal.direction} {signal.contract} confidence={signal.confidence:.2f}")
-        total_signals += len(signals)
-        current_date += delta
+    # Run the backtest
+    print("Running backtest for Liquid Momentum...")
+    try:
+        backtest_result = backtest_engine.run_backtest(
+            strategy=strategy,
+            symbols=["SPY", "QQQ", "IWM"],
+            start_date=start_date,
+            end_date=end_date,
+            initial_capital=100000.0
+        )
 
-    print(f"\nTotal signals over {(end_date - start_date).days} days: {total_signals}")
-    print(f"Average signals per day: {total_signals / (end_date - start_date).days:.2f}")
+        print(f"  Completed: {backtest_result.total_return:.2%} return, "
+              f"{backtest_result.sharpe_ratio:.2f} Sharpe, {backtest_result.max_drawdown:.2%} max DD")
+        print(f"  Total trades: {backtest_result.total_trades}")
+
+        # Print trades if any
+        if backtest_result.trades:
+            print("\nTrades:")
+            for i, trade in enumerate(backtest_result.trades[:10]):  # Limit to first 10
+                print(f"  {i+1}. {trade.underlying} {trade.direction} {trade.contract_symbol} "
+                      f"PNL: {trade.pnl:.2f} ({trade.pnl_percent:.2%}) "
+                      f"Entry: {trade.entry_time.date()} Exit: {trade.exit_time.date()}")
+            if len(backtest_result.trades) > 10:
+                print(f"  ... and {len(backtest_result.trades) - 10} more trades")
+        else:
+            print("  No trades executed.")
+
+    except Exception as e:
+        print(f"  Error running backtest: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()

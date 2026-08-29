@@ -409,7 +409,7 @@ class BacktestEngine:
         # The equity curve will be updated in the main loop
 
     def _update_positions(self, symbol_data: Dict[str, List[HistoricalBar]], current_time: datetime):
-        """Update open positions with current market prices."""
+        """Update open positions with current market prices and check exit conditions."""
         # Get current prices for all underlying symbols
         underlying_prices: Dict[str, float] = {}
 
@@ -418,29 +418,40 @@ class BacktestEngine:
                 latest_bar = bars[-1]
                 underlying_prices[symbol] = latest_bar.close
 
-        # Update each position
+        # Update each position and check exit conditions
+        positions_to_close = []
         for contract_symbol, position in list(self.positions.items()):
             # Get underlying price for this position's underlying
             underlying_price = underlying_prices.get(position.underlying)
             if underlying_price is None:
                 continue
 
-            # For simplicity in backtracking, we'll estimate option price change
-            # based on underlying price change and delta
-            # A more sophisticated approach would re-price the option using Black-Scholes
+            # Calculate time-based exit
+            hours_open = (current_time - position.entry_time).total_seconds() / 3600.0
 
-            # Calculate unrealized P&L
-            # This is a simplification - in reality we'd need the current option price
-            # For now, we'll approximate based on underlying movement
+            # Simple exit logic: close after 5 days or if we get an opposing signal
+            # In a more sophisticated implementation, we'd check for exit signals from the strategy
+            if hours_open >= 120:  # 5 days * 24 hours
+                positions_to_close.append((contract_symbol, "time_exit"))
+                continue
 
-            # Update MFE and MAE
-            # (Maximum Favorable/Adverse Excursion)
-            # This would require tracking the option price over time
+            # For demonstration, we'll also simulate occasional exits based on random walk
+            # In reality, this would be replaced with actual signal-based exit logic
+            import hashlib
+            hash_input = f"{contract_symbol}{current_time.strftime('%Y%m%d')}"
+            hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
+            if hash_value % 100 < 5:  # 5% chance of exit each day
+                positions_to_close.append((contract_symbol, "random_exit"))
+                continue
 
-            # Check if we should close the position based on signals or time
-            # This would be handled by exit signals in a complete implementation
-
-            pass  # Position updating logic would go here
+        # Close positions that meet exit criteria
+        for contract_symbol, exit_reason in positions_to_close:
+            self._close_position(
+                self.positions[contract_symbol],
+                current_time,
+                underlying_prices.get(self.positions[contract_symbol].underlying, 0.0),
+                exit_reason
+            )
 
     def _close_all_positions(self, current_time: datetime, symbol_data: Dict[str, List[HistoricalBar]]):
         """Close all open positions at the end of the backtest."""

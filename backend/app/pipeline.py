@@ -16,6 +16,7 @@ from backend.app.risk.engine import RiskEngine
 from backend.app.strategies.liquid_momentum import LiquidMomentumStrategy
 from backend.app.ai.supervisor import create_ai_supervisor
 from backend.app.ai.base import AIInput, AIOutput
+import json
 
 
 @dataclass
@@ -282,15 +283,57 @@ class TradingLoop:
             # AI Supervisor Evaluation (Phase 6) - only if enabled
             ai_decision = None
             if self.ai_supervisor is not None:
+                # Get current price for underlying
+                quote = self.market.quote(signal.underlying)
+                current_price = quote.mid or quote.last or 0.0
+
+                # Extract features for the underlying
+                bars = self.market.bars(signal.underlying, days=30)
+                features = {}
+                if bars:
+                    from backend.app.features.engine import (
+                        returns, realized_volatility, sma, ema,
+                        momentum, volume_change, atr, rsi, last_close
+                    )
+
+                    # Calculate various features
+                    if len(bars) >= 2:
+                        rets = returns(bars)
+                        if rets and len(rets) > 0:
+                            features['return_1d'] = rets[-1]
+
+                    features['realized_volatility_20'] = realized_volatility(bars, 20) or 0.0
+                    features['sma_20'] = sma(bars, 20) or 0.0
+                    features['ema_20'] = ema(bars, 20) or 0.0
+                    features['momentum_5'] = momentum(bars, 5) or 0.0
+                    features['volume_change_20'] = volume_change(bars, 20) or 0.0
+                    features['atr_14'] = atr(bars, 14) or 0.0
+                    features['rsi_14'] = rsi(bars, 14) or 50.0
+                    features['last_close'] = last_close(bars) or 0.0
+
+                    # Price relative to moving averages
+                    if features['sma_20'] > 0:
+                        features['price_to_sma20'] = current_price / features['sma_20'] - 1.0
+                    if features['ema_20'] > 0:
+                        features['price_to_ema20'] = current_price / features['ema_20'] - 1.0
+
+                # Get options data for the signal's contract
+                options_snapshot = None
+                if signal.contract:
+                    options_snapshot = self.market.option_snapshot(signal.contract, underlying_price=current_price)
+
                 # Prepare input for AI supervisor
                 ai_input = AIInput(
                     underlying=signal.underlying,
-                    price=0.0,  # We'll need to get current price - for now use 0 as placeholder
-                    features={},  # TODO: Extract actual features
+                    price=current_price,
+                    features=features,
                     signals=[signal],
-                    options=[],  # TODO: Get options data
+                    options=[options_snapshot] if options_snapshot else [],
                     portfolio={"account": account.model_dump()},
-                    risk={}
+                    risk={
+                        "max_risk_per_trade": self.settings.max_risk_per_trade,
+                        "max_portfolio_exposure": self.settings.max_portfolio_exposure,
+                    }
                 )
 
                 # Get AI decision
@@ -335,7 +378,7 @@ class TradingLoop:
                         market_state={"account": account.model_dump()},
                         features={"confidence": signal.confidence, "direction": signal.direction},
                         strategy_signal=signal,
-                        ai_decision=ai_output,
+                        ai_decision=json.dumps(ai_output.__dict__),
                         risk_decision={"approved": False, "reasons": ["AI recommendation: HOLD"]},
                         execution=None,
                         result={"rejected": True, "reasons": ["AI recommendation: HOLD"] + ai_output.risk_factors},
@@ -408,11 +451,11 @@ class TradingLoop:
                 market_state={"account": account.model_dump()},
                 features={"confidence": effective_signal.confidence, "direction": effective_signal.direction},
                 strategy_signal=effective_signal,
-                ai_decision=ai_decision if ai_decision is not None else AIOutput(
+                ai_decision=json.dumps(ai_decision.__dict__) if ai_decision is not None else json.dumps(AIOutput(
                     decision="HOLD", confidence=0.0, contract=None,
                     thesis="AI supervisor disabled", expected_horizon="N/A",
                     risk_factors=[], invalidation_conditions=[]
-                ),
+                ).__dict__),
                 risk_decision=decision,
                 execution=record.get("order"),
                 result=record.get("position") or {"rejected": not decision.approved, "reasons": decision.reasons},

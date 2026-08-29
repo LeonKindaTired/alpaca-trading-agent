@@ -132,7 +132,7 @@ class MeanReversionStrategy(Strategy):
         # Build thesis
         thesis = (
             f"{underlying} price={last_price:.2f} SMA={sma_val:.2f} Z={z_score:.2f} "
-            f"→ {right} {best_snap.contract.symbol} strike {best_snap.contract.strike} "
+            f"-> {right} {best_snap.contract.symbol} strike {best_snap.contract.strike} "
             f"exp {best_snap.contract.expiration}"
         )
 

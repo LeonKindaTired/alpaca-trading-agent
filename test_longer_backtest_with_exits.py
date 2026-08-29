@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Debug script to see how many signals are generated each day.
+Test backtests with longer periods to get more signals/trades.
 """
 
 import sys
 from pathlib import Path
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 # Add the backend directory to the path
 ROOT = Path(__file__).resolve().parent
@@ -16,12 +16,11 @@ from backend.app.config.settings import Settings
 from backend.app.data.mock_alpaca import MockAlpacaClient
 from backend.app.data.market_data import MarketDataService
 from backend.app.strategies.liquid_momentum import LiquidMomentumStrategy
-
+from backend.backtesting.engine import BacktestEngine
+from datetime import date, datetime, timedelta
 
 class HistoricalMockAlpacaClient(MockAlpacaClient):
-    """
-    Extended mock client that can return historical data for backtesting.
-    """
+    """Extended mock client that can return historical data for backtesting."""
 
     def __init__(self, initial_price: float = 450.0):
         super().__init__()
@@ -43,9 +42,9 @@ class HistoricalMockAlpacaClient(MockAlpacaClient):
         """
         from backend.app.data.models import Bar
 
-        # Extend history by one day each time to simulate new data arriving
-        # We always extend by at least one day to simulate the passage of time
-        while len(self._price_history[symbol]) <= self._day:
+        # Extend history if needed
+        price_changes = []  # Store daily changes for volatility calculation
+        while len(self._price_history[symbol]) < days:
             last_price = self._price_history[symbol][-1]
 
             # Add some mean reversion and trend
@@ -61,23 +60,22 @@ class HistoricalMockAlpacaClient(MockAlpacaClient):
 
             # Random walk with volatility
             change = trend + mean_reversion + (self._volatility * (0.5 - (hash(f"{last_price}{len(self._price_history[symbol])}") % 1000) / 500.0))
+            price_changes.append(change)  # Store the change for this day
             new_price = last_price * (1 + change)
             self._price_history[symbol].append(new_price)
-
-        # Increment the day counter for next call
-        self._day += 1
 
         # Return the last 'days' worth of price data as bars
         start_idx = max(0, len(self._price_history[symbol]) - days)
         price_slice = self._price_history[symbol][start_idx:]
-        # We don't have changes_slice in the original, but we need to generate bars
-        # Let's simplify and just use the price_slice to create bars with dummy OHLC
+        changes_slice = price_changes[start_idx:] if price_changes else [0.0] * len(price_slice)
+
         bars = []
         base_time = datetime.now() - timedelta(days=len(price_slice))
 
-        for i, price in enumerate(price_slice):
+        for i, (price, change) in enumerate(zip(price_slice, changes_slice)):
             # Add some intraday volatility
-            intraday_vol = abs(0.001) * 2 + 0.003  # dummy
+            intraday_vol = abs(change) * 2 + 0.003 if i > 0 else 0.01
+
             high = price * (1 + abs(intraday_vol * 0.5))
             low = price * (1 - abs(intraday_vol * 0.5))
             open_price = price_slice[i-1] * (1 + intraday_vol * 0.3) if i > 0 else price
@@ -101,19 +99,19 @@ class HistoricalMockAlpacaClient(MockAlpacaClient):
 
 
 def create_historical_market_data_service() -> MarketDataService:
-    """
-    Create a market data service with historical data capability.
-    """
+    """Create a market data service with historical data capability."""
     client = HistoricalMockAlpacaClient(initial_price=450.0)
     return MarketDataService(client)
 
 
-def main():
-    print("=== Debugging Signal Generation ===\n")
+def run_backtest_for_days(num_days: int):
+    """Run a backtest for the specified number of days."""
+    print(f"\n{'='*60}")
+    print(f"RUNNING BACKTEST FOR {num_days} DAYS")
+    print(f"{'='*60}")
 
-    # Use a short date range for quick testing (10 days)
     end_date = date.today()
-    start_date = end_date - timedelta(days=10)
+    start_date = end_date - timedelta(days=num_days)
 
     print(f"Backtesting from {start_date} to {end_date}")
     print(f"Period: {(end_date - start_date).days} days\n")
@@ -139,25 +137,75 @@ def main():
     # Create strategy
     strategy = LiquidMomentumStrategy(market_data, settings)
 
-    # We'll simulate the backtest loop manually to see signals
-    current_date = start_date
-    delta = timedelta(days=1)
-    total_signals = 0
+    # Initialize backtest engine
+    backtest_engine = BacktestEngine(settings=settings)
 
-    while current_date <= end_date:
-        print(f"--- Date: {current_date} ---")
-        # Generate market state for the strategy (simplified)
-        # In reality, we would pass market_state to generate_signals, but the strategy ignores it
-        # So we just call generate_signals with an empty market state
-        signals = strategy.generate_signals({})
-        print(f"  Signals generated: {len(signals)}")
-        for signal in signals:
-            print(f"    {signal.underlying} {signal.direction} {signal.contract} confidence={signal.confidence:.2f}")
-        total_signals += len(signals)
-        current_date += delta
+    # Run backtest
+    try:
+        backtest_result = backtest_engine.run_backtest(
+            strategy=strategy,
+            symbols=["SPY", "QQQ", "IWM"],
+            start_date=start_date,
+            end_date=end_date,
+            initial_capital=100000.0
+        )
 
-    print(f"\nTotal signals over {(end_date - start_date).days} days: {total_signals}")
-    print(f"Average signals per day: {total_signals / (end_date - start_date).days:.2f}")
+        result = {
+            "days": num_days,
+            "total_return": backtest_result.total_return,
+            "annualized_return": backtest_result.annualized_return,
+            "sharpe_ratio": backtest_result.sharpe_ratio,
+            "sortino_ratio": backtest_result.sortino_ratio,
+            "max_drawdown": backtest_result.max_drawdown,
+            "win_rate": backtest_result.win_rate,
+            "profit_factor": backtest_result.profit_factor,
+            "total_trades": backtest_result.total_trades,
+            "final_equity": backtest_result.final_equity
+        }
+
+        print(f"  Trades: {backtest_result.total_trades}")
+        print(f"  Return: {backtest_result.total_return:.2%}")
+        print(f"  Sharpe: {backtest_result.sharpe_ratio:.2f}")
+        print(f"  Max DD: {backtest_result.max_drawdown:.2%}")
+        print(f"  Win Rate: {backtest_result.win_rate:.2%}")
+
+        return result
+
+    except Exception as e:
+        print(f"  Error running backtest: {e}")
+        return None
+
 
 if __name__ == "__main__":
-    main()
+    print("TESTING LIQUID MOMENTUM STRATEGY WITH LONGER BACKTEST PERIODS")
+
+    # Test different periods
+    periods = [30, 60, 90, 120]  # days
+    results = []
+
+    for days in periods:
+        result = run_backtest_for_days(days)
+        if result:
+            results.append(result)
+
+    # Summary
+    print(f"\n{'='*60}")
+    print("SUMMARY OF RESULTS")
+    print(f"{'='*60}")
+    print(f"{'Days':<6} {'Trades':<8} {'Return':<10} {'Sharpe':<8} {'Max DD':<10} {'Win Rate':<10}")
+    print("-"*60)
+    for r in results:
+        print(f"{r['days']:<6} {r['total_trades']:<8} {r['total_return']:>9.2%} "
+              f"{r['sharpe_ratio']:>7.2f} {r['max_drawdown']:>9.2%} "
+              f"{r['win_rate']:>9.2%}")
+
+    # Check if we get more trades with longer periods
+    if len(results) >= 2:
+        first = results[0]
+        last = results[-1]
+        if last['total_trades'] > first['total_trades']:
+            print(f"\n✓ SUCCESS: Number of trades increased from {first['total_trades']} to {last['total_trades']} "
+                  f"when extending from {first['days']} to {last['days']} days.")
+        else:
+            print(f"\n⚠️  NOTE: Number of trades did not increase significantly with longer period.")
+            print(f"   Trades: {first['total_trades']} ({first['days']} days) → {last['total_trades']} ({last['days']} days)")

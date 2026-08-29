@@ -121,7 +121,7 @@ class VolatilityMispricingStrategy(Strategy):
         # Build thesis
         thesis = (
             f"{underlying} IV={best_snap.implied_volatility:.1%} RV={rv:.1%} "
-            f"diff={best_score:.1%} → {right} {best_snap.contract.symbol} "
+            f"diff={best_score:.1%} -> {right} {best_snap.contract.symbol} "
             f"strike {best_snap.contract.strike} exp {best_snap.contract.expiration}"
         )
 

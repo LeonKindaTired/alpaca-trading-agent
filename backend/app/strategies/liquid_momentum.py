@@ -77,7 +77,7 @@ class LiquidMomentumStrategy(Strategy):
             direction=direction,
             confidence=min(0.85, 0.45 + abs(mom) * 20),
             thesis=(
-                f"{underlying} 5-day momentum {mom:.2%} → {right} "
+                f"{underlying} 5-day momentum {mom:.2%} -> {right} "
                 f"{best.contract.symbol} strike {best.contract.strike} exp {best.contract.expiration}"
             ),
             expected_edge=abs(mom),

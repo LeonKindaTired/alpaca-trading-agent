@@ -103,16 +103,51 @@ Risk Context:
         else:
             risk_text = "No risk context available"
 
+        # Format features in a more readable way
+        features_text = ""
+        if input_data.features:
+            features_text = "Technical Indicators:\n"
+            # Group related features for better readability
+            price_features = {k: v for k, v in input_data.features.items() if 'price' in k or 'sma' in k or 'ema' in k}
+            momentum_features = {k: v for k, v in input_data.features.items() if 'momentum' in k}
+            volatility_features = {k: v for k, v in input_data.features.items() if 'vol' in k or 'atr' in k}
+            other_features = {k: v for k, v in input_data.features.items() if k not in price_features and k not in momentum_features and k not in volatility_features}
+
+            if price_features:
+                features_text += "  Price/Moving Averages:\n"
+                for k, v in price_features.items():
+                    features_text += f"    {k}: {v:.4f}\n"
+
+            if momentum_features:
+                features_text += "  Momentum:\n"
+                for k, v in momentum_features.items():
+                    features_text += f"    {k}: {v:.2%}\n"
+
+            if volatility_features:
+                features_text += "  Volatility:\n"
+                for k, v in volatility_features.items():
+                    if 'rsi' in k:
+                        features_text += f"    {k}: {v:.1f}\n"
+                    else:
+                        features_text += f"    {k}: {v:.2%}\n"
+
+            if other_features:
+                features_text += "  Other:\n"
+                for k, v in other_features.items():
+                    features_text += f"    {k}: {v}\n"
+        else:
+            features_text = "No features available"
+
         # Build the prompt
         prompt_parts = [
             "You are an AI trading supervisor for an options trading agent. Your role is to evaluate quantitative trading signals and provide reasoned trading decisions.",
             "",
             "MARKET DATA:",
             f"Underlying: {input_data.underlying}",
-            f"Current Price: {input_data.price}",
+            f"Current Price: {input_data.price:.2f}",
             "",
             "FEATURES:",
-            json.dumps(input_data.features, indent=2) if input_data.features else "No features available",
+            features_text,
             "",
             "QUANTITATIVE SIGNALS:",
             signals_text,
@@ -127,10 +162,10 @@ Risk Context:
             "TASK:",
             "Evaluate the quantitative signal(s) above and provide a trading decision. Consider:",
             "1. Does the signal make technical sense given the market data and features?",
-            "2. Is the opportunity consistent with current market conditions?",
-            "3. What are the key risks and invalidation conditions?",
-            "4. What is your confidence in this trade?",
-            "5. What is the expected holding period?",
+            "2. Is the opportunity consistent with current market conditions (consider RSI, momentum, volatility)?",
+            "3. What are the key risks and invalidation conditions (especially from volatility and volume signals)?",
+            "4. What is your confidence in this trade (0.0-1.0)?",
+            "5. What is the expected holding period based on volatility and market conditions?",
             "",
             "You MUST return a valid JSON object that conforms to the following schema exactly:",
             "{",
@@ -145,8 +180,8 @@ Risk Context:
             "",
             "If you decide HOLD, set contract to null and provide explanation in thesis.",
             "If you decide BUY or SELL, you MUST provide a valid contract symbol.",
-            "Provide a concise but complete thesis explaining your reasoning.",
-            "List specific, actionable risk factors and invalidation conditions.",
+            "Provide a concise but complete thesis explaining your reasoning, referencing specific technical indicators.",
+            "List specific, actionable risk factors and invalidation conditions based on market data.",
             "",
             "Respond ONLY with the JSON object, no additional text or explanation."
         ]
