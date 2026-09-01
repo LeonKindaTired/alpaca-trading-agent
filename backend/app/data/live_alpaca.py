@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data import DataFeed
+from alpaca.data import DataFeed, OptionsFeed
 from alpaca.data.historical.option import OptionHistoricalDataClient
 from alpaca.data.requests import (
     OptionLatestQuoteRequest,
@@ -73,6 +73,8 @@ class LiveAlpacaClient(AlpacaClient):
         self.trading = TradingClient(api_key=key, secret_key=secret, paper=True)
         self.stocks = StockHistoricalDataClient(api_key=key, secret_key=secret)
         self.options = OptionHistoricalDataClient(api_key=key, secret_key=secret)
+        from backend.app.config.logging import setup_logging
+        self.log = setup_logging(settings.log_level)
 
     def get_account(self) -> AccountSnapshot:
         acc = self.trading.get_account()
@@ -209,15 +211,39 @@ class LiveAlpacaClient(AlpacaClient):
     def get_option_snapshot(
         self, symbol: str, *, underlying_price: float | None = None
     ) -> OptionSnapshot:
-        contract = self.get_option_contract(symbol)
+        self.log.info(f"Getting option snapshot for {symbol}")
+        # Try to get real contract; if fails, create a mock contract
+        try:
+            contract = self.get_option_contract(symbol)
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            self.log.info(f"Failed to get option contract for {symbol}: {e}. Creating mock contract.")
+            exp = date.today() + timedelta(days=30)
+            strike = underlying_price if underlying_price is not None else 0.0
+            right = OptionRight.CALL
+            contract = OptionContract(
+                symbol=symbol,
+                underlying="UNKNOWN",
+                expiration=exp,
+                strike=strike,
+                right=right,
+                tradable=False,
+                status="UNKNOWN",
+                open_interest=0,
+            )
+
         quote: Quote | None = None
         iv: float | None = None
         greeks: Greeks | None = None
         try:
-            snap_req = OptionSnapshotRequest(symbol_or_symbols=symbol, feed=DataFeed.IEX)
+            snap_req = OptionSnapshotRequest(symbol_or_symbols=symbol, feed=OptionsFeed.INDICATIVE)
             snaps = self.options.get_option_snapshot(snap_req)
+            self.log.info(f"Received snapshot response for {symbol}: {type(snaps)}")
             raw = snaps[symbol]
+            self.log.info(f"Raw snapshot for {symbol}: {type(raw)} - {dir(raw) if hasattr(raw, '__dict__') else 'No attributes'}")
             latest_quote = getattr(raw, "latest_quote", None)
+            self.log.info(f"Latest quote for {symbol}: {latest_quote}")
             if latest_quote is not None:
                 quote = Quote(
                     symbol=symbol,
@@ -225,8 +251,13 @@ class LiveAlpacaClient(AlpacaClient):
                     ask=_f(getattr(latest_quote, "ask_price", None)),
                     timestamp=getattr(latest_quote, "timestamp", None),
                 )
+                self.log.info(f"Created quote for {symbol}: bid={quote.bid}, ask={quote.ask}")
+            else:
+                self.log.info(f"No latest_quote found in snapshot for {symbol}")
             iv = _f(getattr(raw, "implied_volatility", None))
+            self.log.info(f"Implied volatility for {symbol}: {iv}")
             g = getattr(raw, "greeks", None)
+            self.log.info(f"Greeks for {symbol}: {g}")
             if g is not None:
                 greeks = Greeks(
                     delta=_f(getattr(g, "delta", None)),
@@ -234,20 +265,33 @@ class LiveAlpacaClient(AlpacaClient):
                     theta=_f(getattr(g, "theta", None)),
                     vega=_f(getattr(g, "vega", None)),
                 )
-        except Exception:
+                self.log.info(f"Created greeks for {symbol}: delta={greeks.delta}, gamma={greeks.gamma}")
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            self.log.info(f"Exception in snapshot fetch for {symbol}: {e}")
+            # Leave quote, iv, greeks as None; will be handled by fallback or mock data upstream
+        # Fallback quote if still no quote
+        if quote is None:
             try:
-                qreq = OptionLatestQuoteRequest(symbol_or_symbols=symbol, feed=DataFeed.IEX)
+                qreq = OptionLatestQuoteRequest(symbol_or_symbols=symbol, feed=OptionsFeed.INDICATIVE)
                 qmap = self.options.get_option_latest_quote(qreq)
                 q = qmap[symbol]
+                self.log.info(f"Fallback quote for {symbol}: {q}")
                 quote = Quote(
                     symbol=symbol,
                     bid=_f(getattr(q, "bid_price", None)),
                     ask=_f(getattr(q, "ask_price", None)),
                     timestamp=getattr(q, "timestamp", None),
                 )
-            except Exception:
+                self.log.info(f"Created fallback quote for {symbol}: bid={quote.bid}, ask={quote.ask}")
+            except KeyboardInterrupt:
+                raise
+            except Exception as e2:
+                self.log.info(f"Exception in fallback quote fetch for {symbol}: {e2}")
                 quote = None
 
+        self.log.info(f"Returning snapshot for {symbol}: quote={quote is not None}")
         return OptionSnapshot(
             contract=contract,
             quote=quote,

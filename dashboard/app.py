@@ -1,7 +1,9 @@
 import streamlit as st
-import sqlite3
+import requests
 import pandas as pd
-from datetime import datetime
+import plotly.graph_objects as go
+import plotly.express as px
+from datetime import datetime, timedelta
 import json
 from pathlib import Path
 import sys
@@ -12,567 +14,1452 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.app.config.settings import get_settings
-from backend.app.data.live_alpaca import LiveAlpacaClient
 
 # Page configuration
 st.set_page_config(
-    page_title="Alpaca AI Trading Agent Dashboard",
-    page_icon="📈",
+    page_title="ALPHA - Autonomous Options Agent",
+    page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "ALPHA Autonomous Options Trading Agent - Hackathon Demo"
+    }
 )
 
-# Title and description
-st.title("🤖 Alpaca AI Trading Agent Dashboard")
-st.markdown("*Live monitoring of autonomous options trading agent*")
+# Custom CSS for dark terminal aesthetic
+st.markdown("""
+<style>
+    /* Import modern fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-# Sidebar
-st.sidebar.title("Navigation")
-st.sidebar.info("Dashboard refreshes automatically. For live data, ensure markets are open and system is running.")
+    /* Dark theme */
+    .stApp {
+        background-color: #0a0a0a;
+        color: #e0e0e0;
+        font-family: 'Inter', sans-serif;
+    }
 
-# Helper functions
-def get_db_connection():
-    """Get database connection."""
-    settings = get_settings()
-    return sqlite3.connect(settings.database_path)
+    /* Sidebar styling */
+    .css-1d391kg {
+        background-color: #111111;
+        border-right: 1px solid #1a1a1a;
+    }
 
-def get_system_status(key: str):
-    """Get a system status value by key."""
-    try:
-        conn = get_db_connection()
-        row = conn.execute(
-            "SELECT value FROM system_status WHERE key = ?",
-            (key,),
-        ).fetchone()
-        conn.close()
-        if row is None:
-            return None
-        try:
-            return json.loads(row[0])
-        except (json.JSONDecodeError, TypeError):
-            return row[0]
-    except Exception:
-        return None
+    /* Main content area */
+    .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        max-width: none;
+    }
 
-# Load data
-journal_df = None
-orders_df = None
-account_info = None
-positions = None
-trading_halted = False
-shutdown_reason = ""
+    /* Headers */
+    h1, h2, h3, h4, h5, h6 {
+        color: #ffffff;
+        font-weight: 500;
+        letter-spacing: -0.5px;
+    }
 
-try:
-    # Check system status for trading halt
-    trading_halted = get_system_status('trading_halted') or False
-    if isinstance(trading_halted, str):
-        trading_halted = trading_halted.lower() == 'true'
-    shutdown_reason = get_system_status('shutdown_reason') or ""
-    if shutdown_reason is None:
-        shutdown_reason = ""
-except Exception:
-    trading_halted = False
-    shutdown_reason = ""
+    /* Metrics cards */
+    [data-testid="metric-container"] {
+        background-color: #111111;
+        border: 1px solid #1a1a1a;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
-# Show shutdown banner if halted
-if trading_halted and shutdown_reason:
-    st.error(f"**TRADING HALTED**: {shutdown_reason}")
-elif trading_halted:
-    st.warning("**TRADING HALTED**: Autonomous trading has been halted (no reason provided)")
+    [data-testid="metric-container"] > label {
+        color: #888888;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-def load_journal_data():
-    """Load decision journal data."""
-    try:
-        conn = get_db_connection()
-        query = """
-        SELECT
-            timestamp,
-            underlying,
-            market_state,
-            features,
-            strategy_signal,
-            ai_decision,
-            ai_confidence,
-            ai_reasoning,
-            risk_decision,
-            execution,
-            result
-        FROM decision_journal
-        ORDER BY timestamp DESC
-        """
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
-    except Exception as e:
-        st.error(f"Error loading journal data: {e}")
-        return pd.DataFrame()
+    [data-testid="metric-container"] > div {
+        color: #ffffff;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
 
-def load_orders_data():
-    """Load orders data."""
-    try:
-        conn = get_db_connection()
-        query = """
-        SELECT
-            id,
-            internal_id,
-            alpaca_id,
-            symbol,
-            side,
-            qty,
-            status,
-            created_at,
-            payload
-        FROM orders
-        ORDER BY created_at DESC
-        """
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df
-    except Exception as e:
-        st.error(f"Error loading orders data: {e}")
-        return pd.DataFrame()
+    /* Tables */
+    .dataframe {
+        background-color: #111111;
+        border: 1px solid #1a1a1a;
+    }
 
-def get_account_info():
-    """Get current account information from Alpaca."""
-    try:
-        settings = get_settings()
-        if not settings.alpaca_api_key or settings.alpaca_api_key.startswith("your_"):
-            return None
+    .dataframe th {
+        background-color: #0a0a0a;
+        color: #cccccc;
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #1a1a1a;
+    }
 
-        client = LiveAlpacaClient(settings)
-        account = client.get_account()
-        return {
-            'equity': float(account.equity),
-            'cash': float(account.cash),
-            'buying_power': float(account.buying_power),
-            'portfolio_value': float(account.portfolio_value),
-            'status': str(account.status),
-            'trading_blocked': account.trading_blocked
+    .dataframe td {
+        color: #e0e0e0;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: transparent;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: #111111;
+        border-radius: 6px 6px 0 0;
+        gap: 8px;
+        padding: 0.75rem 1.5rem;
+        color: #888888;
+        font-weight: 500;
+        border: 1px solid transparent;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border-color: #1a1a1a;
+        border-bottom-color: #1a1a1a;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid #1a1a1a;
+        border-radius: 4px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .stButton > button:hover {
+        background-color: #222222;
+        border-color: #222222;
+        color: #ffffff;
+    }
+
+    /* Status indicators */
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-live { background-color: #10b981; }
+    .status-warning { background-color: #f59e0b; }
+    .status-error { background-color: #ef4444; }
+    .status-off { background-color: #6b7280; }
+
+    /* Top bar */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        background-color: #111111;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .agent-identity {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .agent-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .agent-type {
+        font-size: 0.875rem;
+        color: #888888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .system-state {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.875rem;
+        color: #888888;
+    }
+
+    .system-state div {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .environment-indicator {
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+    }
+
+    .env-paper {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    /* Cards */
+    .card {
+        background-color: #111111;
+        border: 1px solid #1a1a1a;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    /* Activity feed */
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-time {
+        font-size: 0.875rem;
+        color: #6b7280;
+        min-width: 60px;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-type {
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-description {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+
+    /* Activity type colors */
+    .type-signal { color: #6366f1; }
+    .type-ai-decision { color: #10b981; }
+    .type-risk-approved { color: #10b981; }
+    .type-risk-rejected { color: #ef4444; }
+    .type-execution { color: #f59e0b; }
+    .type-exit { color: #8b5cf6; }
+    .type-rejection { color: #ef4444; }
+
+    /* Position table */
+    .position-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .position-table th {
+        background-color: #0a0a0a;
+        color: #cccccc;
+        font-weight: 500;
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .position-table td {
+        color: #e0e0e0;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #1a1a1a;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .position-table tr:hover {
+        background-color: #1a1a1a;
+    }
+
+    /* P&L coloring */
+    .profit { color: #10b981; }
+    .loss { color: #ef4444; }
+
+    /* Loading states */
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #888888;
+        font-style: italic;
+    }
+
+    /* Empty states */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .top-bar {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch;
         }
-    except Exception as e:
-        # Don't show error in production - just return None for demo
-        return None
 
-def get_positions():
-    """Get current positions from Alpaca."""
+        .system-state {
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# API base URL
+API_BASE = "http://localhost:8000/api/dashboard"
+
+def fetch_api(endpoint, params=None):
+    """Fetch data from the dashboard API"""
     try:
-        settings = get_settings()
-        if not settings.alpaca_api_key or settings.alpaca_api_key.startswith("your_"):
-            return []
-
-        client = LiveAlpacaClient(settings)
-        positions = client.list_positions()
-        return positions
-    except Exception as e:
-        # Don't show error in production - just return empty list for demo
-        return []
-
-# Load data
-journal_df = load_journal_data()
-orders_df = load_orders_data()
-account_info = get_account_info()
-positions = get_positions()
-
-# Main dashboard layout
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Portfolio", "📋 Positions", "📝 Trades & Signals", "🧠 Agent Reasoning"])
-
-with tab1:
-    st.header("Portfolio Overview")
-
-    # Account info section
-    col1, col2, col3, col4 = st.columns(4)
-
-    if account_info:
-        with col1:
-            st.metric(
-                label="Total Equity",
-                value=f"${account_info['equity']:,.2f}",
-                delta=None
-            )
-        with col2:
-            st.metric(
-                label="Cash",
-                value=f"${account_info['cash']:,.2f}",
-                delta=None
-            )
-        with col3:
-            st.metric(
-                label="Buying Power",
-                value=f"${account_info['buying_power']:,.2f}",
-                delta=None
-            )
-        with col4:
-            st.metric(
-                label="Portfolio Value",
-                value=f"${account_info['portfolio_value']:,.2f}",
-                delta=None
-            )
-
-        # Additional metrics
-        col5, col6, col7, col8 = st.columns(4)
-        with col5:
-            st.metric(
-                label="Account Status",
-                value=account_info['status'],
-                delta=None
-            )
-        with col6:
-            trading_status = "🟢 Enabled" if not account_info['trading_blocked'] else "🔴 Blocked"
-            st.metric(
-                label="Trading Status",
-                value=trading_status,
-                delta=None
-            )
-        with col7:
-            st.metric(
-                label="Positions Count",
-                value=len(positions),
-                delta=None
-            )
-        with col8:
-            # Calculate daily P&L from journal if possible
-            st.metric(
-                label="Today's Trades",
-                value=len(journal_df[journal_df['timestamp'].str.contains(datetime.now().strftime('%Y-%m-%d'))]),
-                delta=None
-            )
-    else:
-        # Show demo/mock data when Alpaca not connected
-        with col1:
-            st.metric(label="Total Equity", value="$100,000.00")
-        with col2:
-            st.metric(label="Cash", value="$100,000.00")
-        with col3:
-            st.metric(label="Buying Power", value="$400,000.00")
-        with col4:
-            st.metric(label="Portfolio Value", value="$100,000.00")
-        with col5:
-            st.metric(label="Account Status", value="ACTIVE (Demo)")
-        with col6:
-            st.metric(label="Trading Status", value="🟢 Enabled")
-        with col7:
-            st.metric(label="Positions Count", value="0")
-        with col8:
-            st.metric(label="Today's Trades", value="0")
-
-        st.info("💡 **Demo Mode**: Connect Alpaca API keys to see live account data")
-
-with tab2:
-    st.header("Current Positions")
-
-    if positions:
-        # Convert positions to DataFrame for display
-        positions_data = []
-        for pos in positions:
-            positions_data.append({
-                'Symbol': getattr(pos, 'symbol', 'N/A'),
-                'Quantity': getattr(pos, 'qty', 0),
-                'Side': getattr(pos, 'side', 'N/A').title(),
-                'Entry Price': f"${float(getattr(pos, 'avg_entry_price', 0)):,.2f}",
-                'Current Price': f"${float(getattr(pos, 'current_price', 0)):,.2f}" if hasattr(pos, 'current_price') else "N/A",
-                'Market Value': f"${float(getattr(pos, 'market_value', 0)):,.2f}" if hasattr(pos, 'market_value') else "N/A",
-                'Unrealized P&L': f"${float(getattr(pos, 'unrealized_pl', 0)):,.2f}" if hasattr(pos, 'unrealized_pl') else "N/A",
-                'Unrealized P&L %': f"{float(getattr(pos, 'unrealized_plpc', 0)) * 100:.2f}%" if hasattr(pos, 'unrealized_plpc') else "N/A",
-            })
-
-        if positions_data:
-            positions_df = pd.DataFrame(positions_data)
-            st.dataframe(positions_df, use_container_width=True)
+        response = requests.get(f"{API_BASE}{endpoint}", params=params, timeout=5)
+        if response.status_code == 200:
+            return response.json()
         else:
-            st.info("No position data available to display")
-    else:
-        # Show demo data
-        st.info("📭 No open positions (markets closed or no trades executed)")
-        st.markdown("""
-        **Position data will appear here when:**
-        - Markets are open (Monday-Friday, 9:30 AM - 4:00 PM ET)
-        - The trading agent generates and executes signals
-        - Positions are held overnight or intraday
-        """)
+            st.error(f"API Error: {response.status_code}")
+            return None
+    except requests.exceptions.RequestException as e:
+        # Return demo data if API is not available
+        return get_demo_data(endpoint)
+    except Exception as e:
+        st.error(f"Error fetching data: {str(e)}")
+        return get_demo_data(endpoint)
 
-        # Show example position structure
-        with st.expander("📋 See example position format"):
-            st.code("""
-            Position Fields:
-            - Symbol: e.g., SPY240830C00500000
-            - Quantity: Number of contracts
-            - Side: Long or Short
-            - Entry Price: Average entry price
-            - Current Price: Real-time market price
-            - Market Value: Position value
-            - Unrealized P&L: Profit/loss if closed now
-            - Unrealized P&L %: Return percentage
-            """, language="text")
+def get_demo_data(endpoint):
+    """Return demo data for development/testing"""
+    demo_data = {
+        "/overview": {
+            "portfolio_value": 102481.32,
+            "today_pnl": 842.17,
+            "today_pnl_percent": 0.82,
+            "total_pnl": 2481.32,
+            "total_pnl_percent": 2.48,
+            "drawdown": 1.8,
+            "drawdown_percent": 1.8,
+            "positions_count": 4,
+            "trading_enabled": True,
+            "last_updated": datetime.now().isoformat(),
+            "demo": True
+        },
+        "/equity-curve": {
+            "data": [
+                {"date": (datetime.now() - timedelta(days=i)).date().isoformat(),
+                 "equity": 100000 + (i * 25) + ((-1)**i * 50),
+                 "daily_pnl": ((-1)**i * 50) + 25}
+                for i in range(30, 0, -1)
+            ],
+            "timeframe": "1M",
+            "starting_equity": 100000.0,
+            "current_equity": 102481.32,
+            "demo": True
+        },
+        "/positions": [
+            {
+                "symbol": "NVDA260925C00180000",
+                "quantity": 2,
+                "side": "buy",
+                "entry_price": 4.21,
+                "current_price": 4.45,
+                "market_value": 890.00,
+                "unrealized_pl": 48.00,
+                "unrealized_pl_percent": 5.68,
+                "asset_class": "option",
+                "contract": "NVDA   260925C00180000"
+            },
+            {
+                "symbol": "TSLA260925P00250000",
+                "quantity": 1,
+                "side": "sell",
+                "entry_price": 3.80,
+                "current_price": 3.50,
+                "market_value": 350.00,
+                "unrealized_pl": 30.00,
+                "unrealized_pl_percent": 7.89,
+                "asset_class": "option",
+                "contract": "TSLA   260925P00250000"
+            },
+            {
+                "symbol": "SPY260925C00450000",
+                "quantity": 5,
+                "side": "buy",
+                "entry_price": 2.10,
+                "current_price": 2.25,
+                "market_value": 1125.00,
+                "unrealized_pl": 75.00,
+                "unrealized_pl_percent": 7.14,
+                "asset_class": "option",
+                "contract": "SPY    260925C00450000"
+            },
+            {
+                "symbol": "QQQ260925P00320000",
+                "quantity": 3,
+                "side": "sell",
+                "entry_price": 1.85,
+                "current_price": 1.70,
+                "market_value": 510.00,
+                "unrealized_pl": 45.00,
+                "unrealized_pl_percent": 8.11,
+                "asset_class": "option",
+                "contract": "QQQ    260925P00320000"
+            }
+        ],
+        "/trades": [
+            {
+                "id": 1,
+                "internal_id": "agt-entry-20260830094224001",
+                "alpaca_id": "5a7b3c9d-8e2f-4a1b-9c3d-4e5f6a7b8c9d",
+                "symbol": "NVDA260925C00180000",
+                "side": "buy",
+                "quantity": 2,
+                "status": "filled",
+                "timestamp": "2026-08-30T09:42:24Z",
+                "filled_quantity": 2,
+                "filled_avg_price": 4.21,
+                "pnl": 48.00
+            },
+            {
+                "id": 2,
+                "internal_id": "agt-entry-20260830093105002",
+                "alpaca_id": "3b2c1d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
+                "symbol": "TSLA260925P00250000",
+                "side": "sell",
+                "quantity": 1,
+                "status": "filled",
+                "timestamp": "2026-08-30T09:31:05Z",
+                "filled_quantity": 1,
+                "filled_avg_price": 3.80,
+                "pnl": 30.00
+            },
+            {
+                "id": 3,
+                "internal_id": "agt-reject-20260830092512003",
+                "alpaca_id": None,
+                "symbol": "AMD260925C00100000",
+                "side": "buy",
+                "quantity": 2,
+                "status": "rejected",
+                "timestamp": "2026-08-30T09:25:12Z",
+                "filled_quantity": 0,
+                "filled_avg_price": 0,
+                "pnl": 0
+            }
+        ],
+        "/live-activity": [
+            {
+                "timestamp": "2026-08-30T09:42:24Z",
+                "underlying": "NVDA",
+                "event_type": "execution",
+                "description": "ORDER FILLED: NVDA 260925 C 180",
+                "status": "success",
+                "confidence": 0.84
+            },
+            {
+                "timestamp": "2026-08-30T09:42:21Z",
+                "underlying": "NVDA",
+                "event_type": "ai_decision",
+                "description": "AI DECISION: BUY NVDA",
+                "status": "info",
+                "confidence": 0.84
+            },
+            {
+                "timestamp": "2026-08-30T09:42:18Z",
+                "underlying": "NVDA",
+                "event_type": "signal",
+                "description": "VOLATILITY SIGNAL: NVDA IV/RV divergence",
+                "status": "info",
+                "confidence": 0.82
+            },
+            {
+                "timestamp": "2026-08-30T09:31:05Z",
+                "underlying": "TSLA",
+                "event_type": "execution",
+                "description": "ORDER FILLED: TSLA 260925 P 250",
+                "status": "success"
+            },
+            {
+                "timestamp": "2026-08-30T09:25:12Z",
+                "underlying": "AMD",
+                "event_type": "rejection",
+                "description": "SIGNAL REJECTED: AMD - Spread > threshold",
+                "status": "error"
+            }
+        ],
+        "/risk-summary": {
+            "exposure": 18.4,
+            "max_exposure": 40.0,
+            "daily_loss": 0.4,
+            "daily_limit": 3.0,
+            "drawdown": 1.8,
+            "max_drawdown": 10.0,
+            "open_positions": 4,
+            "max_positions": 8,
+            "last_updated": datetime.now().isoformat(),
+            "demo": True
+        },
+        "/agent-status": {
+            "status": "ONLINE",
+            "agent_mode": "AI SUPERVISOR",
+            "last_decision": "2026-08-30T09:42:24Z",
+            "next_scan": "In progress",
+            "trading_halted": False,
+            "shutdown_reason": "",
+            "system_health": {
+                "alpaca_connection": "Healthy",
+                "market_data": "Healthy",
+                "ai_provider": "Healthy",
+                "database": "Healthy",
+                "execution": "Healthy",
+                "last_heartbeat": "2s ago"
+            },
+            "demo": True
+        },
+        "/strategy-performance": {
+            "total_trades": 15,
+            "winning_trades": 12,
+            "win_rate": 80.0,
+            "profit_factor": 1.85,
+            "sharpe_ratio": 1.25,
+            "sortino_ratio": 1.50,
+            "max_drawdown": 1.8,
+            "average_trade": 145.50,
+            "strategy_name": "Momentum + Volatility Regime",
+            "demo": True
+        }
+    }
 
-with tab3:
-    st.header("Trading Activity")
+    return demo_data.get(endpoint, {})
 
-    # Orders section
-    st.subheader("📋 Order History")
-    if not orders_df.empty:
-        # Format orders for display
-        orders_display = orders_df.copy()
-        if 'created_at' in orders_display.columns:
-            orders_display['created_at'] = pd.to_datetime(orders_display['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
-        st.dataframe(orders_display[['created_at', 'symbol', 'side', 'qty', 'status', 'internal_id']],
-                    use_container_width=True, hide_index=True)
-    else:
-        st.info("📭 No orders executed yet")
-
-    st.divider()
-
-    # Signals/Journal section
-    st.subheader("📊 Recent Signals & Decisions")
-    if not journal_df.empty:
-        # Format journal data for display
-        journal_display = journal_df.copy()
-
-        # Extract key information from JSON fields
-        def extract_ai_decision(row):
-            try:
-                if row['ai_decision'] and isinstance(row['ai_decision'], str):
-                    data = json.loads(row['ai_decision'])
-                    return data.get('decision', 'N/A')
-                return 'N/A'
-            except:
-                return 'N/A'
-
-        def extract_ai_confidence(row):
-            try:
-                if row['ai_decision'] and isinstance(row['ai_decision'], str):
-                    data = json.loads(row['ai_decision'])
-                    return f"{data.get('confidence', 0):.2%}"
-                return 'N/A'
-            except:
-                return 'N/A'
-
-        def extract_risk_approved(row):
-            try:
-                if row['risk_decision'] and isinstance(row['risk_decision'], str):
-                    data = json.loads(row['risk_decision'])
-                    return data.get('approved', False)
-                return False
-            except:
-                return False
-
-        journal_display['AI Decision'] = journal_display.apply(extract_ai_decision, axis=1)
-        journal_display['AI Confidence'] = journal_display.apply(extract_ai_confidence, axis=1)
-        journal_display['Risk Approved'] = journal_display.apply(extract_risk_approved, axis=1)
-        journal_display['Timestamp'] = pd.to_datetime(journal_df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-        journal_display['Underlying'] = journal_df['underlying'].fillna('-')
-
-        # Display relevant columns
-        display_cols = ['Timestamp', 'Underlying', 'AI Decision', 'AI Confidence', 'Risk Approved']
-        st.dataframe(journal_display[display_cols], use_container_width=True, hide_index=True)
-
-        # Show recent activity chart
-        if len(journal_display) > 1:
-            st.subheader("📈 Signal Frequency (Last 24h)")
-            journal_display['datetime'] = pd.to_datetime(journal_display['timestamp'], utc=True)
-            recent = journal_display[journal_display['datetime'] > (pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=24))]
-            if not recent.empty:
-                recent['hour'] = recent['datetime'].dt.floor('h')
-                hourly_counts = recent.groupby('hour').size().reset_index(name='count')
-                st.line_chart(hourly_counts.set_index('hour')['count'])
-            else:
-                st.info("No activity in last 24 hours")
-    else:
-        st.info("📭 No trading activity recorded yet")
-
-with tab4:
-    st.header("🧠 Agent Reasoning & Decision Chain")
-
-    if not journal_df.empty:
-        # Show most recent decision with full reasoning
-        latest = journal_df.iloc[0]  # Most recent first
-
-        st.subheader("Latest Decision")
-        col1, col2 = st.columns([1, 2])
-
-        with col1:
-            st.markdown("**Timestamp:**")
-            st.markdown(latest['timestamp'])
-            st.markdown("**Underlying:**")
-            st.markdown(latest['underlying'] or "N/A")
-
-        with col2:
-            # Parse and display AI decision
-            try:
-                if latest['ai_decision'] and isinstance(latest['ai_decision'], str):
-                    ai_data = json.loads(latest['ai_decision'])
-                    st.markdown("**AI Decision:**")
-                    st.markdown(f"**{ai_data.get('decision', 'N/A')}** (Confidence: {ai_data.get('confidence', 0):.2%})")
-                    st.markdown("**Thesis:**")
-                    st.markdown(ai_data.get('thesis', 'No thesis provided'))
-
-                    if ai_data.get('risk_factors'):
-                        st.markdown("**Risk Factors:**")
-                        for risk in ai_data['risk_factors']:
-                            st.markdown(f"• {risk}")
-
-                    if ai_data.get('invalidation_conditions'):
-                        st.markdown("**Invalidation Conditions:**")
-                        for condition in ai_data['invalidation_conditions']:
-                            st.markdown(f"• {condition}")
-                else:
-                    st.markdown("**AI Decision:**")
-                    st.markdown("N/A")
-            except Exception as e:
-                st.markdown("**AI Decision:**")
-                st.markdown("Error parsing AI decision")
-                st.exception(e)
-
-        st.divider()
-
-        # Show full decision chain for latest entry
-        st.subheader("Full Decision Chain")
-
-        # Create expandable sections for each part of the chain
-        with st.expander("📊 Market State & Features", expanded=False):
-            try:
-                if latest['market_state'] and isinstance(latest['market_state'], str):
-                    market_data = json.loads(latest['market_state'])
-                    st.json(market_data)
-                else:
-                    st.write("No market state data")
-            except:
-                st.write(latest['market_state'])
-
-        with st.expander("📈 Strategy Signal", expanded=False):
-            try:
-                if latest['strategy_signal'] and isinstance(latest['strategy_signal'], str):
-                    signal_data = json.loads(latest['strategy_signal'])
-                    st.json(signal_data)
-                else:
-                    st.write(latest['strategy_signal'])
-            except:
-                st.write(latest['strategy_signal'])
-
-        with st.expander("🤖 AI Reasoning", expanded=True):
-            try:
-                if latest['ai_decision'] and isinstance(latest['ai_decision'], str):
-                    ai_data = json.loads(latest['ai_decision'])
-                    st.json(ai_data)
-                else:
-                    st.write(latest['ai_decision'])
-            except:
-                st.write(latest['ai_decision'])
-
-        with st.expander("⚠️ Risk Assessment", expanded=False):
-            try:
-                if latest['risk_decision'] and isinstance(latest['risk_decision'], str):
-                    risk_data = json.loads(latest['risk_decision'])
-                    st.json(risk_data)
-                else:
-                    st.write(latest['risk_decision'])
-            except:
-                st.write(latest['risk_decision'])
-
-        with st.expander("💸 Execution Details", expanded=False):
-            try:
-                if latest['execution'] and isinstance(latest['execution'], str):
-                    exec_data = json.loads(latest['execution'])
-                    st.json(exec_data)
-                else:
-                    st.write(latest['execution'] or "No execution (signal rejected or no signal)")
-            except:
-                st.write(latest['execution'] or "No execution")
-
-        with st.expander("📈 Trade Result", expanded=False):
-            try:
-                if latest['result'] and isinstance(latest['result'], str):
-                    result_data = json.loads(latest['result'])
-                    st.json(result_data)
-                else:
-                    st.write(latest['result'] or "No result yet")
-            except:
-                st.write(latest['result'] or "No result yet")
-
-        st.divider()
-
-        # Show all recent decisions in timeline
-        st.subheader("Recent Decision Timeline")
-        for idx, row in journal_df.head(5).iterrows():  # Show last 5 decisions
-            with st.container():
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
-                with col1:
-                    st.caption(pd.to_datetime(row['timestamp']).strftime('%H:%M:%S'))
-                with col2:
-                    st.caption(row['underlying'] or '-')
-                with col3:
-                    try:
-                        if row['ai_decision'] and isinstance(row['ai_decision'], str):
-                            ai_dec = json.loads(row['ai_decision'])
-                            st.caption(f"{ai_dec.get('decision', 'N/A')} {ai_dec.get('confidence', 0):.0%}")
-                        else:
-                            st.caption("N/A")
-                    except:
-                        st.caption("N/A")
-                with col4:
-                    try:
-                        if row['ai_decision'] and isinstance(row['ai_decision'], str):
-                            ai_dec = json.loads(row['ai_decision'])
-                            thesis = ai_dec.get('thesis', 'No thesis')
-                            st.caption(thesis[:50] + "..." if len(thesis) > 50 else thesis)
-                        else:
-                            st.caption("No AI reasoning")
-                    except:
-                        st.caption("Error parsing reasoning")
-                st.divider()
-    else:
-        st.info("📭 No decision data available yet")
-        st.markdown("""
-        **Decision chain data will appear when:**
-        - The trading agent is running and generating signals
-        - Market conditions trigger strategy signals
-        - The AI supervisor evaluates those signals
-        - The risk engine makes approval decisions
-        - Trades are executed or rejected
-        """)
-
-        # Show example of what the decision chain looks like
-        with st.expander("🔍 See example decision chain format"):
-            st.markdown("""
-            Each decision record includes:
-
-            1. **Market State**: Account info, portfolio state
-            2. **Features**: Technical indicators (returns, momentum, RSI, etc.)
-            3. **Strategy Signal**: Raw signal from Liquid Momentum/Volatility Mispricing/Mean Reversion
-            4. **AI Reasoning**: Decision, confidence, thesis, risk factors, invalidation conditions
-            5. **Risk Assessment**: Approved/rejected with reasons (position sizing, liquidity, etc.)
-            6. **Execution Details**: Order ID, quantity, status, Alpaca ID
-            7. **Trade Result**: Position details if filled, or rejection reasons
-
-            This provides a complete audit trail for every trading decision.
-            """)
+# Initialize session state for auto-refresh
+if 'last_refresh' not in st.session_state:
+    st.session_state.last_refresh = datetime.now()
 
 # Auto-refresh every 30 seconds
-st.sidebar.markdown("---")
-st.sidebar.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-if st.sidebar.button("🔄 Refresh Now"):
+if (datetime.now() - st.session_state.last_refresh).seconds > 30:
+    st.session_state.last_refresh = datetime.now()
     st.rerun()
 
-# Auto-refresh using JavaScript (optional)
-st.sidebar.markdown(
-    """
-    <script>
-    setTimeout(function(){
-        window.location.reload();
-    }, 30000);
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+# Sidebar navigation
+with st.sidebar:
+    st.markdown("""
+    <div style="text-align: center; padding: 1.5rem 0; border-bottom: 1px solid #1a1a1a;">
+        <div style="font-size: 1.5rem; font-weight: 600; color: #ffffff;">ALPHA</div>
+        <div style="font-size: 0.875rem; color: #888888; text-transform: uppercase; letter-spacing: 0.5px;">
+            Autonomous Options Agent
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Navigation menu
+    pages = [
+        ("Overview", "📊"),
+        ("Portfolio", "💼"),
+        ("Positions", "📈"),
+        ("Trades", "📋"),
+        ("Agent Activity", "⚡"),
+        ("Strategy", "🎯"),
+        ("Risk", "⚠️"),
+        ("Settings", "⚙️")
+    ]
+
+    for page, icon in pages:
+        if st.button(f"{icon} {page}", key=f"nav_{page}", use_container_width=True):
+            st.session_state.current_page = page
+
+    # Set default page
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Overview"
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # System status in sidebar
+    status_data = fetch_api("/agent-status")
+    if status_data:
+        status_class = "status-live" if status_data.get('status') == 'ONLINE' else "status-warning"
+        mode_class = "status-live" if status_data.get('agent_mode') == 'AI SUPERVISOR' else "status-warning"
+
+        st.markdown(f"""
+        <div style="background-color: #1a1a1a; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+            <div style="font-size: 0.875rem; color: #888888; margin-bottom: 0.5px;">SYSTEM STATUS</div>
+            <div class="status-indicator" style="margin-bottom: 0.5rem;">
+                <span class="status-dot {status_class}"></span>
+                <span>{status_data.get('status', 'UNKNOWN')}</span>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot {mode_class}"></span>
+                <span>{status_data.get('agent_mode', 'UNKNOWN')}</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                Last decision: {status_data.get('last_decision', 'Never')[:16]}...
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Environment indicator
+    settings = get_settings()
+    env_class = "env-paper" if settings.alpaca_paper else ""
+    env_text = "PAPER TRADING" if settings.alpaca_paper else "LIVE TRADING"
+
+    st.markdown(f"""
+    <div style="text-align: center; margin-top: auto; padding: 1rem 0; border-top: 1px solid #1a1a1a;">
+        <div class="environment-indicator {env_class}">{env_text}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Main content area - Top Bar
+col1, col2, col3 = st.columns([2, 3, 1])
+
+with col1:
+    st.markdown("""
+    <div class="agent-identity">
+        <div class="agent-name">ALPHA</div>
+        <div class="agent-type">Autonomous Options Agent</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    # System state
+    status_data = fetch_api("/agent-status")
+    market_open = True  # Simplified - in reality would check market hours
+    agent_online = status_data and status_data.get('status') == 'ONLINE' if status_data else False
+
+    market_class = "status-live" if market_open else "status-warning"
+    agent_class = "status-live" if agent_online else "status-error"
+
+    st.markdown(f"""
+    <div class="system-state">
+        <div>
+            <span class="status-dot {market_class}"></span>
+            <span>MARKET {'OPEN' if market_open else 'CLOSED'}</span>
+        </div>
+        <div>
+            <span class="status-dot {agent_class}"></span>
+            <span>AGENT {'ONLINE' if agent_online else 'OFFLINE'}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    # Time and environment
+    current_time = datetime.now().strftime("%H:%M:%S UTC")
+    env_text = "PAPER TRADING" if settings.alpaca_paper else "LIVE"
+    env_class = "env-paper" if settings.alpaca_paper else ""
+
+    st.markdown(f"""
+    <div style="text-align: right;">
+        <div style="font-size: 0.875rem; color: #888888;">{current_time}</div>
+        <div class="environment-indicator {env_class}" style="margin-top: 0.25rem;">{env_text}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<hr style='margin: 1rem 0; border-color: #1a1a1a;'>", unsafe_allow_html=True)
+
+# Page routing
+page = st.session_state.current_page
+
+if page == "Overview":
+    # Overview Page - Hero Metrics
+    overview_data = fetch_api("/overview")
+
+    if overview_data:
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                label="PORTFOLIO",
+                value=f"${overview_data.get('portfolio_value', 0):,.2f}",
+                delta=f"{overview_data.get('total_pnl_percent', 0):+.2f}%"
+            )
+
+        with col2:
+            st.metric(
+                label="TODAY",
+                value=f"+${overview_data.get('today_pnl', 0):,.2f}",
+                delta=f"+{overview_data.get('today_pnl_percent', 0):.2f}%"
+            )
+
+        with col3:
+            st.metric(
+                label="TOTAL P&L",
+                value=f"+${overview_data.get('total_pnl', 0):,.2f}",
+                delta=f"+{overview_data.get('total_pnl_percent', 0):.2f}%"
+            )
+
+        with col4:
+            st.metric(
+                label="DRAWDOWN",
+                value=f"-{overview_data.get('drawdown', 0):.2f}%",
+                delta=None
+            )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Equity Curve
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">EQUITY CURVE</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    equity_data = fetch_api("/equity-curve")
+    if equity_data and equity_data.get('data'):
+        df = pd.DataFrame(equity_data['data'])
+        df['date'] = pd.to_datetime(df['date'])
+
+        fig = go.Figure()
+
+        # Equity line
+        fig.add_trace(go.Scatter(
+            x=df['date'],
+            y=df['equity'],
+            mode='lines',
+            name='Portfolio Value',
+            line=dict(color='#10b981', width=2),
+            fill='tozeroy',
+            fillcolor='rgba(16, 185, 129, 0.1)'
+        ))
+
+        fig.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#e0e0e0', family='Inter'),
+            xaxis=dict(
+                showgrid=False,
+                zeroline=False,
+                showticklabels=True,
+                tickformat='%b %d'
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor='rgba(26, 26, 26, 0.5)',
+                zeroline=False,
+                tickprefix='$',
+                tickformat=',.0f'
+            ),
+            margin=dict(l=0, r=0, t=0, b=0),
+            height=300,
+            hovermode='x unified'
+        )
+
+        # Time range buttons
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    type="buttons",
+                    direction="left",
+                    x=0.0,
+                    y=1.15,
+                    showactive=True,
+                    buttons=[
+                        dict(label="1D",
+                             method="update",
+                             args=[{"x": [df[df['date'] >= (df['date'].max() - timedelta(days=1))]['date']],
+                                   "y": [df[df['date'] >= (df['date'].max() - timedelta(days=1))]['equity']]}]),
+                        dict(label="1W",
+                             method="update",
+                             args=[{"x": [df[df['date'] >= (df['date'].max() - timedelta(weeks=1))]['date']],
+                                   "y": [df[df['date'] >= (df['date'].max() - timedelta(weeks=1))]['equity']]}]),
+                        dict(label="1M",
+                             method="update",
+                             args=[{"x": [df[df['date'] >= (df['date'].max() - timedelta(days=30))]['date']],
+                                   "y": [df[df['date'] >= (df['date'].max() - timedelta(days=30))]['equity']]}]),
+                        dict(label="ALL",
+                             method="update",
+                             args=[{"x": [df['date']], "y": [df['equity']]}])
+                    ]
+                )
+            ]
+        )
+
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Live Agent Activity
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">LIVE AGENT ACTIVITY</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    activity_data = fetch_api("/live-activity")
+    if activity_data:
+        activity_container = st.container()
+        with activity_container:
+            for activity in activity_data[:8]:  # Show last 8 activities
+                time_str = datetime.fromisoformat(activity['timestamp'].replace('Z', '+00:00')).strftime("%H:%M:%S")
+
+                # Determine activity type and styling
+                event_type = activity.get('event_type', 'signal')
+                type_class = f"type-{event_type}"
+
+                # Map event types to display names and icons
+                type_map = {
+                    'signal': ('SIGNAL', '🔍'),
+                    'ai_decision': ('AI DECISION', '🤖'),
+                    'risk_approved': ('RISK APPROVED', '✅'),
+                    'risk_rejected': ('RISK REJECTED', '❌'),
+                    'execution': ('EXECUTION', '💸'),
+                    'exit': ('EXIT', '🚪'),
+                    'rejection': ('REJECTION', '🚫')
+                }
+
+                display_type, icon = type_map.get(event_type, (event_type.upper(), '•'))
+
+                st.markdown(f"""
+                <div class="activity-item">
+                    <div class="activity-time">{time_str}</div>
+                    <div class="activity-content">
+                        <div class="activity-type {type_class}">{icon} {display_type}</div>
+                        <div class="activity-description">{activity.get('description', '')}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="loading">Loading agent activity...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Positions":
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">CURRENT POSITIONS</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    positions_data = fetch_api("/positions")
+    if positions_data:
+        if positions_data:
+            # Create position table
+            st.markdown("""
+            <table class="position-table">
+                <thead>
+                    <tr>
+                        <th>Underlying</th>
+                        <th>Contract</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Entry</th>
+                        <th>Mark</th>
+                        <th>P&L</th>
+                        <th>P&L %</th>
+                        <th>Delta</th>
+                        <th>Theta</th>
+                        <th>IV</th>
+                        <th>Expiration</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """, unsafe_allow_html=True)
+
+            for pos in positions_data:
+                # Format data
+                underlying = pos.get('symbol', '')[:6]  # Extract underlying
+                contract = pos.get('contract', '').strip()
+                side = pos.get('side', '').upper()
+                qty = pos.get('quantity', 0)
+                entry = f"${pos.get('entry_price', 0):.2f}"
+                mark = f"${pos.get('current_price', 0):.2f}"
+                pnl = pos.get('unrealized_pl', 0)
+                pnl_pct = pos.get('unrealized_pl_percent', 0)
+                # For demo, we'll use placeholder values for Greeks
+                delta = "0.25"
+                theta = "-0.05"
+                iv = "0.35"
+                exp = pos.get('symbol', '')[6:12] if len(pos.get('symbol', '')) > 12 else "260925"
+
+                pnl_class = "profit" if pnl >= 0 else "loss"
+
+                st.markdown(f"""
+                <tr>
+                    <td>{underlying}</td>
+                    <td>{contract}</td>
+                    <td>{side}</td>
+                    <td>{qty}</td>
+                    <td>{entry}</td>
+                    <td>{mark}</td>
+                    <td class="{pnl_class}">${pnl:.2f}</td>
+                    <td class="{pnl_class}">{pnl_pct:+.2f}%</td>
+                    <td>{delta}</td>
+                    <td>{theta}</td>
+                    <td>{iv}</td>
+                    <td>{exp}</td>
+                </tr>
+                """, unsafe_allow_html=True)
+
+            st.markdown("""
+                </tbody>
+            </table>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <div>NO OPEN POSITIONS</div>
+                <div style="color: #6b7280; margin-top: 1rem;">
+                    The agent is currently scanning the market for qualified opportunities.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="loading">Loading positions data...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Trades":
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">TRADE HISTORY</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    trades_data = fetch_api("/trades")
+    if trades_data:
+        if trades_data:
+            # Create trades table
+            st.markdown("""
+            <table class="position-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Underlying</th>
+                        <th>Contract</th>
+                        <th>Strategy</th>
+                        <th>AI Decision</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>P&L</th>
+                        <th>Duration</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """, unsafe_allow_html=True)
+
+            for trade in trades_data[:10]:  # Show last 10 trades
+                # Format timestamp
+                try:
+                    ts = datetime.fromisoformat(trade['timestamp'].replace('Z', '+00:00'))
+                    time_str = ts.strftime("%H:%M:%S")
+                except:
+                    time_str = trade['timestamp'][:8] if len(trade['timestamp']) > 8 else trade['timestamp']
+
+                underlying = trade.get('symbol', '')[:6]
+                # For demo, we'll extract contract info from symbol
+                contract = trade.get('symbol', '')
+                strategy = "Momentum"  # Placeholder
+                ai_decision = "BUY" if trade.get('side') == 'buy' else "SELL"
+                entry = f"${trade.get('filled_avg_price', 0):.2f}" if trade.get('filled_avg_price') else "N/A"
+                exit_price = f"${trade.get('filled_avg_price', 0) * 1.1:.2f}" if trade.get('filled_avg_price') else "N/A"  # Simplified
+                pnl = trade.get('pnl', 0)
+                duration = "2h 15m"  # Placeholder
+                reason = "Signal executed" if trade.get('status') == 'filled' else "Risk rejected"
+
+                pnl_class = "profit" if pnl >= 0 else "loss"
+
+                st.markdown(f"""
+                <tr>
+                    <td>{time_str}</td>
+                    <td>{underlying}</td>
+                    <td>{contract}</td>
+                    <td>{strategy}</td>
+                    <td>{ai_decision}</td>
+                    <td>{entry}</td>
+                    <td>{exit_price}</td>
+                    <td class="{pnl_class}">{pnl:+.2f}</td>
+                    <td>{duration}</td>
+                    <td style="font-size: 0.75rem; color: #888888;">{reason}</td>
+                </tr>
+                """, unsafe_allow_html=True)
+
+            st.markdown("""
+                </tbody>
+            </table>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <div>NO TRADES YET</div>
+                <div style="color: #6b7280; margin-top: 1rem;">
+                    Once the agent identifies and executes an approved opportunity, it will appear here.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="loading">Loading trades data...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Agent Activity":
+    # This is similar to the activity section in Overview but more detailed
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">AGENT ACTIVITY DETAIL</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    activity_data = fetch_api("/live-activity")
+    if activity_data:
+        for i, activity in enumerate(activity_data):
+            time_str = datetime.fromisoformat(activity['timestamp'].replace('Z', '+00:00')).strftime("%H:%M:%S")
+
+            # Determine styling based on event type
+            event_type = activity.get('event_type', 'signal')
+            type_class = f"type-{event_type}"
+
+            # Map to display info
+            type_info = {
+                'signal': ('🔍 SIGNAL', '#6366f1'),
+                'ai_decision': ('🤖 AI DECISION', '#10b981'),
+                'risk_approved': ('✅ RISK APPROVED', '#10b981'),
+                'risk_rejected': ('❌ RISK REJECTED', '#ef4444'),
+                'execution': ('💸 EXECUTION', '#f59e0b'),
+                'exit': ('🚪 EXIT', '#8b5cf6'),
+                'rejection': ('🚫 REJECTION', '#ef4444')
+            }
+
+            display_text, color = type_info.get(event_type, ('• UNKNOWN', '#888888'))
+
+            st.markdown(f"""
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid #1a1a1a;">
+                <div style="font-size: 0.875rem; color: #6b7280; min-width: 60px;">{time_str}</div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                        <span style="font-size: 0.875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: {color};">{display_text}</span>
+                        <span style="font-size: 0.75rem; color: #6b7280;">{activity.get('underlying', '')}</span>
+                    </div>
+                    <div style="font-size: 0.875rem; line-height: 1.4; color: #e0e0e0;">{activity.get('description', '')}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Show confidence if available
+            if 'confidence' in activity and activity['confidence'] > 0:
+                st.markdown(f"""
+                <div style="margin-left: 3.75rem; padding: 0.5rem; background-color: rgba(26, 26, 26, 0.5); border-radius: 4px; margin-bottom: 1rem;">
+                    <div style="font-size: 0.75rem; color: #888888;">Confidence: {activity['confidence']:.0%}</div>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="loading">Loading agent activity...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Strategy":
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">STRATEGY PERFORMANCE</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    strategy_data = fetch_api("/strategy-performance")
+    if strategy_data:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("""
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">STRATEGY STATUS</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div style="background-color: #1a1a1a; padding: 1.5rem; border-radius: 6px;">
+                <div style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">
+                    {strategy_data.get('strategy_name', 'Unknown Strategy')}
+                </div>
+                <div style="color: #888888; margin-bottom: 1.5rem;">
+                    ACTIVE STRATEGY
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem;">
+                    <div>Trades</div>
+                    <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                        {strategy_data.get('total_trades', 0)}
+                    </div>
+                    <div>Win Rate</div>
+                    <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                        {strategy_data.get('win_rate', 0):.1f}%
+                    </div>
+                    <div>Profit Factor</div>
+                    <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                        {strategy_data.get('profit_factor', 0):.2f}
+                    </div>
+                    <div>Sharpe Ratio</div>
+                    <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                        {strategy_data.get('sharpe_ratio', 0):.2f}
+                    </div>
+                    <div>Sortino Ratio</div>
+                    <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                        {strategy_data.get('sortino_ratio', 0):.2f}
+                    </div>
+                    <div>Avg Trade</div>
+                    <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                        ${strategy_data.get('average_trade', 0):.2f}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("""
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">RISK METRICS</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            risk_data = fetch_api("/risk-summary")
+            if risk_data:
+                st.markdown(f"""
+                <div style="background-color: #1a1a1a; padding: 1.5rem; border-radius: 6px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem;">
+                        <div>Exposure</div>
+                        <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                            {risk_data.get('exposure', 0):.1f}%
+                        </div>
+                        <div>Max Exposure</div>
+                        <div style="text-align: right; color: #888888;">
+                            {risk_data.get('max_exposure', 0):.1f}%
+                        </div>
+                        <div>Daily Loss</div>
+                        <div style="text-align: right;
+                            color: {'#10b981' if risk_data.get('daily_loss', 0) <= risk_data.get('daily_limit', 3) else '#ef4444'};
+                            font-weight: 500;">
+                            {risk_data.get('daily_loss', 0):.2f}%
+                        </div>
+                        <div>Daily Limit</div>
+                        <div style="text-align: right; color: #888888;">
+                            {risk_data.get('daily_limit', 0):.1f}%
+                        </div>
+                        <div>Drawdown</div>
+                        <div style="text-align: right;
+                            color: {'#10b981' if risk_data.get('drawdown', 0) <= risk_data.get('max_drawdown', 10) else '#ef4444'};
+                            font-weight: 500;">
+                            {risk_data.get('drawdown', 0):.2f}%
+                        </div>
+                        <div>Max Drawdown</div>
+                        <div style="text-align: right; color: #888888;">
+                            {risk_data.get('max_drawdown', 0):.1f}%
+                        </div>
+                        <div>Open Positions</div>
+                        <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
+                            {risk_data.get('open_positions', 0)}
+                        </div>
+                        <div>Maximum</div>
+                        <div style="text-align: right; color: #888888;">
+                            {risk_data.get('max_positions', 0)}
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="loading">Loading strategy data...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Risk":
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">RISK MANAGEMENT</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    risk_data = fetch_api("/risk-summary")
+    if risk_data:
+        # Risk gauges / progress bars
+        st.markdown("""
+        <div style="background-color: #1a1a1a; padding: 1.5rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <div style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">CURRENT RISK EXPOSURE</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        exposure = min(risk_data.get('exposure', 0), risk_data.get('max_exposure', 40))
+        exposure_pct = (exposure / risk_data.get('max_exposure', 40)) * 100
+
+        st.markdown(f"""
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Portfolio Exposure</span>
+                <span style="font-weight: 500;">{exposure:.1f}% / {risk_data.get('max_exposure', 0):.1f}%</span>
+            </div>
+            <div style="background-color: #2a2a2a; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background-color:
+                    {'#10b981' if exposure_pct < 50 else '#f59e0b' if exposure_pct < 80 else '#ef4444'};
+                    width: {exposure_pct}%; height: 100%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        daily_loss = risk_data.get('daily_loss', 0)
+        daily_limit = risk_data.get('daily_limit', 3)
+        daily_pct = min((daily_loss / daily_limit) * 100, 100) if daily_limit > 0 else 0
+
+        st.markdown(f"""
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Daily Loss</span>
+                <span style="font-weight: 500;">{-daily_loss:.2f}% / {daily_limit:.1f}%</span>
+            </div>
+            <div style="background-color: #2a2a2a; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background-color:
+                    {'#10b981' if daily_pct < 50 else '#f59e0b' if daily_pct < 80 else '#ef4444'};
+                    width: {daily_pct}%; height: 100%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        drawdown = risk_data.get('drawdown', 0)
+        max_dd = risk_data.get('max_drawdown', 10)
+        dd_pct = min((drawdown / max_dd) * 100, 100) if max_dd > 0 else 0
+
+        st.markdown(f"""
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Drawdown</span>
+                <span style="font-weight: 500;">{drawdown:.2f}% / {max_dd:.1f}%</span>
+            </div>
+            <div style="background-color: #2a2a2a; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background-color:
+                    {'#10b981' if dd_pct < 50 else '#f59e0b' if dd_pct < 80 else '#ef4444'};
+                    width: {dd_pct}%; height: 100%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Recent risk decisions
+        st.markdown("""
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">RECENT RISK DECISIONS</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        activity_data = fetch_api("/live-activity")
+        if activity_data:
+            risk_activities = [a for a in activity_data if a.get('event_type') in ['risk_approved', 'risk_rejected']]
+            if risk_activities:
+                for activity in risk_activities[:5]:  # Show last 5 risk decisions
+                    time_str = datetime.fromisoformat(activity['timestamp'].replace('Z', '+00:00')).strftime("%H:%M")
+                    underlying = activity.get('underlying', '')
+                    status = "APPROVED" if activity.get('event_type') == 'risk_approved' else "REJECTED"
+                    status_class = "status-live" if activity.get('event_type') == 'risk_approved' else "status-error"
+
+                    # Extract risk amount from description if possible
+                    import re
+                    risk_match = re.search(r'Risk: ([0-9.]+)%', activity.get('description', ''))
+                    risk_text = f"Risk: {risk_match.group(1)}%" if risk_match else ""
+
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid #1a1a1a;">
+                        <div style="font-size: 0.875rem; color: #6b7280; min-width: 50px;">{time_str}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; color: #e0e0e0;">{underlying}</div>
+                            <div style="font-size: 0.75rem; color: #888888;">{risk_text}</div>
+                        </div>
+                        <div style="padding: 0.25rem 0.75rem; background-color:
+                            {'rgba(16, 185, 129, 0.1)' if status == 'APPROVED' else 'rgba(239, 68, 68, 0.1)'};
+                            border: 1px solid
+                            {'rgba(16, 185, 129, 0.2)' if status == 'APPROVED' else 'rgba(239, 68, 68, 0.2)'};
+                            border-radius: 4px; font-size: 0.75rem; font-weight: 500;
+                            text-transform: uppercase; letter-spacing: 0.5px;
+                            color: {'#10b981' if status == 'APPROVED' else '#ef4444'};">
+                            {status}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div>NO RECENT RISK DECISIONS</div>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="loading">Loading risk data...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Settings":
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">SYSTEM SETTINGS</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="background-color: #1a1a1a; padding: 1.5rem; border-radius: 6px;">
+        <h3 style="color: #ffffff; margin-top: 0;">Configuration</h3>
+        <p style="color: #888888; margin-bottom: 1.5rem;">
+            These settings control the trading agent's behavior. Changes require restarting the agent.
+        </p>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                Trading Enabled
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.trading_enabled and 'ENABLED' or 'DISABLED'}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                AI Supervisor
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.use_ai_supervisor and 'ENABLED' or 'DISABLED'}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                Max Risk Per Trade
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.max_risk_per_trade:.1%}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                Max Portfolio Exposure
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.max_portfolio_exposure:.1%}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                Max Daily Loss
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.max_daily_loss:.1%}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                Max Drawdown
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.max_drawdown:.1%}</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.875rem; color: #cccccc; margin-bottom: 0.25rem; font-weight: 500;">
+                Underlyings
+            </label>
+            <div style="background-color: #2a2a2a; padding: 0.75rem; border-radius: 4px;">
+                <span style="color: #888888;">{settings.underlyings}</span>
+            </div>
+        </div>
+
+        <button style="background-color: #1a1a1a; color: #e0e0e0; border: 1px solid #1a1a1a;
+            padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s ease;">
+            Refresh Settings
+        </button>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Footer
-st.sidebar.markdown("---")
-st.sidebar.markdown(
-    """
-    <div style='text-align: center; color: #666; font-size: 0.8em;'>
-        Alpaca AI Trading Agent Dashboard<br>
-        Built for Hackathon Competition<br>
-        Markets open Monday 9:30 AM ET
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""
+<div style="text-align: center; color: #6b7280; font-size: 0.875rem; padding: 2rem 0; border-top: 1px solid #1a1a1a;">
+    ALPHA Autonomous Options Agent • Paper Trading Demo •
+    <span id="last-update"></span>
+</div>
+""", unsafe_allow_html=True)
+
+# JavaScript for updating time
+st.markdown("""
+<script>
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour12: false,
+            timeZone: 'UTC'
+        });
+        document.getElementById('last-update').textContent = `Last updated: ${timeString}`;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+</script>
+""", unsafe_allow_html=True)

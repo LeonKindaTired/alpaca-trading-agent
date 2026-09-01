@@ -273,6 +273,7 @@ class TradingLoop:
             "positions": [p.model_dump(mode="json") for p in positions],
         }
 
+        self.log.info("About to generate signals")
         signals = self.strategy.generate_signals(market_state)
         self.log.info("Generated %d signal(s)", len(signals))
 
