@@ -612,8 +612,9 @@ with st.sidebar:
         ("Trades", "📋"),
         ("Agent Activity", "⚡"),
         ("Strategy", "🎯"),
+        ("Agent Config", "⚙️"),
         ("Risk", "⚠️"),
-        ("Settings", "⚙️")
+        ("Settings", "🔧")
     ]
 
     for page, icon in pages:
@@ -629,15 +630,26 @@ with st.sidebar:
     # System status in sidebar
     status_data = fetch_api("/agent-status")
     if status_data:
-        status_class = "status-live" if status_data.get('status') == 'ONLINE' else "status-warning"
+        # Agent loop status
+        agent_status = status_data.get('status', 'UNKNOWN')
+        agent_status_class = "status-live" if agent_status == 'RUNNING' else "status-off"
+        # Trading halted status (from system health)
+        trading_halted = status_data.get('system_health', {}).get('execution', '') == 'Halted'  # We don't have this directly, but we can use the trading_halted from the agent status? Actually, we have a separate field in the agent status response.
+        # Let's check if we have a trading_halted field in the status_data (we added it in the agent-status endpoint)
+        trading_halted = status_data.get('trading_halted', False)
+        trading_halted_class = "status-warning" if trading_halted else "status-live"
         mode_class = "status-live" if status_data.get('agent_mode') == 'AI SUPERVISOR' else "status-warning"
 
         st.markdown(f"""
         <div style="background-color: #1a1a1a; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
             <div style="font-size: 0.875rem; color: #888888; margin-bottom: 0.5px;">SYSTEM STATUS</div>
-            <div class="status-indicator" style="margin-bottom: 0.5rem;">
-                <span class="status-dot {status_class}"></span>
-                <span>{status_data.get('status', 'UNKNOWN')}</span>
+            <div class="status-indicator" style="margin-bottom: 0.25rem;">
+                <span class="status-dot {agent_status_class}"></span>
+                <span>AGENT LOOP: {agent_status}</span>
+            </div>
+            <div class="status-indicator" style="margin-bottom: 0.25rem;">
+                <span class="status-dot {trading_halted_class}"></span>
+                <span>TRADING: {'HALTED' if trading_halted else 'RUNNING'}</span>
             </div>
             <div class="status-indicator">
                 <span class="status-dot {mode_class}"></span>
@@ -675,10 +687,12 @@ with col2:
     # System state
     status_data = fetch_api("/agent-status")
     market_open = True  # Simplified - in reality would check market hours
-    agent_online = status_data and status_data.get('status') == 'ONLINE' if status_data else False
+    agent_loop_running = status_data and status_data.get('status') == 'RUNNING' if status_data else False
+    trading_halted = status_data and status_data.get('trading_halted', False) if status_data else False
 
     market_class = "status-live" if market_open else "status-warning"
-    agent_class = "status-live" if agent_online else "status-error"
+    agent_loop_class = "status-live" if agent_loop_running else "status-error"
+    trading_status_class = "status-warning" if trading_halted else "status-live"
 
     st.markdown(f"""
     <div class="system-state">
@@ -687,8 +701,12 @@ with col2:
             <span>MARKET {'OPEN' if market_open else 'CLOSED'}</span>
         </div>
         <div>
-            <span class="status-dot {agent_class}"></span>
-            <span>AGENT {'ONLINE' if agent_online else 'OFFLINE'}</span>
+            <span class="status-dot {agent_loop_class}"></span>
+            <span>AGENT LOOP: {'RUNNING' if agent_loop_running else 'STOPPED'}</span>
+        </div>
+        <div>
+            <span class="status-dot {trading_status_class}"></span>
+            <span>TRADING: {'HALTED' if trading_halted else 'RUNNING'}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -745,6 +763,54 @@ if page == "Overview":
                 value=f"-{overview_data.get('drawdown', 0):.2f}%",
                 delta=None
             )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Agent Control Card
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">AGENT CONTROL</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Get agent status
+    agent_status_data = fetch_api("/agent-status")
+    agent_running = agent_status_data and agent_status_data.get('status') == 'RUNNING' if agent_status_data else False
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if agent_running:
+            st.success("Agent is currently RUNNING")
+        else:
+            st.info("Agent is currently STOPPED")
+
+    with col2:
+        if agent_running:
+            if st.button("STOP AGENT", type="primary"):
+                # Call the stop agent API
+                try:
+                    response = requests.post(f"{API_BASE}/agent/stop")
+                    if response.status_code == 200:
+                        st.success("Agent stopped successfully")
+                        st.rerun()
+                    else:
+                        st.error("Failed to stop agent")
+                except Exception as e:
+                    st.error(f"Error stopping agent: {e}")
+        else:
+            if st.button("START AGENT", type="primary"):
+                # Call the start agent API
+                try:
+                    response = requests.post(f"{API_BASE}/agent/start")
+                    if response.status_code == 200:
+                        st.success("Agent started successfully")
+                        st.rerun()
+                    else:
+                        st.error("Failed to start agent")
+                except Exception as e:
+                    st.error(f"Error starting agent: {e}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1177,6 +1243,214 @@ elif page == "Strategy":
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+    else:
+        st.markdown("""
+        <div class="loading">Loading strategy data...</div>
+        """, unsafe_allow_html=True)
+
+elif page == "Agent Config":
+    st.markdown("""
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">AGENT CONFIGURATION</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Fetch current configuration
+    config_data = fetch_api("/agent/config")
+    if config_data is None:
+        st.error("Failed to load configuration")
+        config_data = {}
+
+    # Create a form for updating configuration
+    with st.form("agent_config_form"):
+        st.subheader("Trading Parameters")
+        col1, col2 = st.columns(2)
+        with col1:
+            trading_enabled = st.checkbox("Trading Enabled", value=config_data.get("trading_enabled", True))
+            max_risk_per_trade = st.number_input(
+                "Max Risk Per Trade",
+                min_value=0.0,
+                max_value=1.0,
+                value=config_data.get("max_risk_per_trade", 0.01),
+                step=0.001,
+                format="%.3f"
+            )
+            max_portfolio_exposure = st.number_input(
+                "Max Portfolio Exposure",
+                min_value=0.0,
+                max_value=1.0,
+                value=config_data.get("max_portfolio_exposure", 0.20),
+                step=0.001,
+                format="%.3f"
+            )
+            max_daily_loss = st.number_input(
+                "Max Daily Loss",
+                min_value=0.0,
+                max_value=1.0,
+                value=config_data.get("max_daily_loss", 0.02),
+                step=0.001,
+                format="%.3f"
+            )
+            max_drawdown = st.number_input(
+                "Max Drawdown",
+                min_value=0.0,
+                max_value=1.0,
+                value=config_data.get("max_drawdown", 0.08),
+                step=0.001,
+                format="%.3f"
+            )
+        with col2:
+            max_positions = st.number_input(
+                "Max Positions",
+                min_value=1,
+                max_value=20,
+                value=config_data.get("max_positions", 3),
+                step=1
+            )
+            max_underlying_concentration = st.number_input(
+                "Max Underlying Concentration",
+                min_value=0.0,
+                max_value=1.0,
+                value=config_data.get("max_underlying_concentration", 0.15),
+                step=0.001,
+                format="%.3f"
+            )
+            max_bid_ask_spread = st.number_input(
+                "Max Bid/Ask Spread",
+                min_value=0.0,
+                max_value=1.0,
+                value=config_data.get("max_bid_ask_spread", 0.08),
+                step=0.001,
+                format="%.3f"
+            )
+            min_option_volume = st.number_input(
+                "Min Option Volume",
+                min_value=0,
+                max_value=10000,
+                value=config_data.get("min_option_volume", 10),
+                step=1
+            )
+            min_open_interest = st.number_input(
+                "Min Open Interest",
+                min_value=0,
+                max_value=10000,
+                value=config_data.get("min_open_interest", 50),
+                step=1
+            )
+
+        st.subscriber("Underlyings")
+        underlyings = st.text_input(
+            "Underlyings (comma-separated)",
+            value=config_data.get("underlyings", "SPY,QQQ,IWM")
+        )
+
+        st.subheader("Date Range")
+        col1, col2 = st.columns(2)
+        with col1:
+            min_dte = st.number_input(
+                "Min Days to Expiration",
+                min_value=0,
+                max_value=365,
+                value=config_data.get("min_dte", 3),
+                step=1
+            )
+        with col2:
+            max_dte = st.number_input(
+                "Max Days to Expiration",
+                min_value=0,
+                max_value=365,
+                value=config_data.get("max_dte", 45),
+                step=1
+            )
+
+        st.subheader("Timing")
+        loop_interval_seconds = st.number_input(
+            "Loop Interval (seconds)",
+            min_value=10,
+            max_value=3600,
+            value=config_data.get("loop_interval_seconds", 60),
+            step=10
+        )
+        max_consecutive_failures = st.number_input(
+            "Max Consecutive Failures",
+            min_value=1,
+            max_value=20,
+            value=config_data.get("max_consecutive_failures", 5),
+            step=1
+        )
+
+        st.subheader("AI Parameters")
+        col1, col2 = st.columns(2)
+        with col1:
+            ai_enabled = st.checkbox("AI Enabled", value=config_data.get("ai_enabled", False))
+            use_ai_supervisor = st.checkbox("Use AI Supervisor", value=config_data.get("use_ai_supervisor", True))
+            ai_temperature = st.number_input(
+                "AI Temperature",
+                min_value=0.0,
+                max_value=2.0,
+                value=config_data.get("ai_temperature", 0.3),
+                step=0.1
+            )
+        with col2:
+            ai_max_tokens = st.number_input(
+                "AI Max Tokens",
+                min_value=1,
+                max_value=4000,
+                value=config_data.get("ai_max_tokens", 1000),
+                step=1
+            )
+            ai_model = st.selectbox(
+                "AI Model",
+                options=["gemini-1.5-pro-latest", "claude-3-opus-20240229", "gpt-4-turbo"],
+                index=0 if config_data.get("ai_model", "gemini-1.5-pro-latest") == "gemini-1.5-pro-latest" else
+                      1 if config_data.get("ai_model", "gemini-1.5-pro-latest") == "claude-3-opus-20240229" else 2
+            )
+
+        st.subheader("Environment")
+        alpaca_paper = st.checkbox("Alpaca Paper Trading", value=config_data.get("alpaca_paper", True))
+
+        # Submit button
+        submitted = st.form_submit_button("UPDATE CONFIGURATION", type="primary")
+        if submitted:
+            # Prepare the configuration update
+            config_update = {
+                "trading_enabled": trading_enabled,
+                "max_risk_per_trade": max_risk_per_trade,
+                "max_portfolio_exposure": max_portfolio_exposure,
+                "max_daily_loss": max_daily_loss,
+                "max_drawdown": max_drawdown,
+                "max_positions": max_positions,
+                "max_underlying_concentration": max_underlying_concentration,
+                "max_bid_ask_spread": max_bid_ask_spread,
+                "min_option_volume": min_option_volume,
+                "min_open_interest": min_open_interest,
+                "min_dte": min_dte,
+                "max_dte": max_dte,
+                "loop_interval_seconds": loop_interval_seconds,
+                "max_consecutive_failures": max_consecutive_failures,
+                "ai_enabled": ai_enabled,
+                "use_ai_supervisor": use_ai_supervisor,
+                "ai_temperature": ai_temperature,
+                "ai_max_tokens": ai_max_tokens,
+                "ai_model": ai_model,
+                "alpaca_paper": alpaca_paper
+            }
+            # Call the API to update the configuration
+            try:
+                response = requests.put(f"{API_BASE}/agent/config", json=config_update)
+                if response.status_code == 200:
+                    st.success("Configuration updated successfully!")
+                    # Optionally, we can rerun to reflect the changes
+                    # st.rerun()
+                else:
+                    st.error(f"Failed to update configuration: {response.text}")
+            except Exception as e:
+                st.error(f"Error updating configuration: {e}")
+
+elif page == "Risk":
 
             risk_data = fetch_api("/risk-summary")
             if risk_data:

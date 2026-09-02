@@ -30,7 +30,7 @@ class TradingLoop:
     def __init__(self, client: AlpacaClient, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self.client = client
-        self.db = Database(self.settings.database_path)
+        self.db = Database(self.settings.database_path, self.settings)
         self.market = MarketDataService(client)
         self.strategy = LiquidMomentumStrategy(self.market, self.settings)
         self.risk = RiskEngine(self.settings)

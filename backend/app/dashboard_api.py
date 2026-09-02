@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 def get_db():
     settings = get_settings()
-    return Database(settings.database_path)
+    return Database(settings.database_path, settings)
 
 def get_alpaca_client():
     settings = get_settings()
@@ -632,8 +632,13 @@ async def get_agent_status(
         except:
             last_decision = "Unknown"
 
+        # Get agent running status from the controller
+        from backend.app.agent_controller import agent_controller
+        agent_running = agent_controller.is_running()
+        agent_status = "RUNNING" if agent_running else "STOPPED"
+
         return {
-            "status": "ONLINE" if not trading_halted else "HALTED",
+            "status": agent_status,  # This reflects whether the agent loop is running
             "agent_mode": agent_mode,
             "last_decision": last_decision,
             "next_scan": "In progress",  # Simplified
@@ -651,7 +656,7 @@ async def get_agent_status(
     except Exception as e:
         # Return demo data
         return {
-            "status": "ONLINE",
+            "status": "RUNNING",  # Assume running in demo
             "agent_mode": "AI SUPERVISOR",
             "last_decision": "2026-08-30T09:42:24Z",
             "next_scan": "In progress",
@@ -667,6 +672,82 @@ async def get_agent_status(
             },
             "demo": True
         }
+
+
+# New endpoints for agent control
+@router.post("/agent/start")
+async def start_agent():
+    """Start the agent loop"""
+    from backend.app.agent_controller import agent_controller
+    success = agent_controller.start()
+    if not success:
+        raise HTTPException(status_code=400, detail="Agent is already running")
+    return {"status": "started"}
+
+
+@router.post("/agent/stop")
+async def stop_agent():
+    """Stop the agent loop"""
+    from backend.app.agent_controller import agent_controller
+    success = agent_controller.stop()
+    if not success:
+        raise HTTPException(status_code=400, detail="Agent is not running")
+    return {"status": "stopped"}
+
+
+@router.put("/agent/config")
+async def update_agent_config(
+    config_update: dict,
+    db: Database = Depends(get_db)
+):
+    """Update the agent configuration"""
+    from backend.app.agent_controller import agent_controller
+    # Update the configuration via the controller
+    success = agent_controller.update_configuration(config_update, changed_by="dashboard")
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update configuration")
+    return {"status": "configuration updated"}
+
+
+@router.get("/agent/config")
+async def get_agent_config(
+    db: Database = Depends(get_db)
+):
+    """Get the current agent configuration"""
+    from backend.app.agent_controller import agent_controller
+    # Get the current settings from the controller
+    settings = agent_controller._get_current_settings()
+    if settings is None:
+        settings = get_settings()
+    # Return the settings as a dictionary (excluding sensitive information)
+    config_dict = {
+        # Trading parameters
+        "trading_enabled": settings.trading_enabled,
+        "max_risk_per_trade": settings.max_risk_per_trade,
+        "max_portfolio_exposure": settings.max_portfolio_exposure,
+        "max_daily_loss": settings.max_daily_loss,
+        "max_drawdown": settings.max_drawdown,
+        "max_positions": settings.max_positions,
+        "max_underlying_concentration": settings.max_underlying_concentration,
+        "max_bid_ask_spread": settings.max_bid_ask_spread,
+        "min_option_volume": settings.min_option_volume,
+        "min_open_interest": settings.min_open_interest,
+        "min_dte": settings.min_dte,
+        "max_dte": settings.max_dte,
+        "loop_interval_seconds": settings.loop_interval_seconds,
+        "max_consecutive_failures": settings.max_consecutive_failures,
+        # Underlyings
+        "underlyings": settings.underlyings,
+        # AI parameters
+        "ai_enabled": settings.ai_enabled,
+        "use_ai_supervisor": settings.use_ai_supervisor,
+        "ai_temperature": settings.ai_temperature,
+        "ai_max_tokens": settings.ai_max_tokens,
+        "ai_model": settings.ai_model,
+        # Environment
+        "alpaca_paper": settings.alpaca_paper,
+    }
+    return config_dict
 
 @router.get("/strategy-performance")
 async def get_strategy_performance(
