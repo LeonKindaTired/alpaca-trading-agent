@@ -7,13 +7,17 @@ from backend.app.data.models import (
     RiskDecision,
     Signal,
 )
+from backend.app.data.market_data import MarketDataService
+from backend.app.features.engine import returns
+import math
 
 
 class RiskEngine:
     """Deterministic final authority. The LLM cannot bypass these checks."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, market_data: MarketDataService) -> None:
         self.settings = settings
+        self.market_data = market_data
 
     def evaluate(
         self,
@@ -79,6 +83,9 @@ class RiskEngine:
         if duplicate_open:
             reasons.append(f"Duplicate order prevention: open order exists for {signal.contract}")
 
+        # Check correlation and concentration limits
+        self._check_correlation_and_concentration(signal, positions, reasons)
+
         if mid is None or mid <= 0:
             return RiskDecision(approved=False, reasons=reasons or ["No valid mid price"], qty=0)
 
@@ -111,3 +118,44 @@ class RiskEngine:
             max_loss=premium * qty,
             details={"spread": spread, "mid": mid, "premium": premium},
         )
+
+    def _check_correlation_and_concentration(self, signal: Signal, positions: list[PositionSnapshot], reasons: list[str]) -> None:
+        """Check correlation and concentration limits"""
+        # Count positions in same direction
+        same_direction_positions = [
+            p for p in positions
+            if ((signal.direction == "long" and p.side.lower() in ["buy", "long"]) or
+                (signal.direction == "short" and p.side.lower() in ["sell", "short"]))
+        ]
+
+        if len(same_direction_positions) >= self.settings.max_same_direction:
+            reasons.append(
+                f"Max same-direction positions exceeded: {len(same_direction_positions)} >= {self.settings.max_same_direction}"
+            )
+            return
+
+        # Count correlated positions (simplified: same underlying or sector)
+        # For simplicity, we'll consider positions with same underlying as correlated
+        correlated_positions = [
+            p for p in positions
+            if signal.underlying in p.symbol or p.symbol.startswith(signal.underlying)
+        ]
+
+        if len(correlated_positions) >= self.settings.max_correlated_positions:
+            reasons.append(
+                f"Max correlated positions exceeded: {len(correlated_positions)} >= {self.settings.max_correlated_positions}"
+            )
+            return
+
+        # Check sector concentration (simplified: we don't have sector data, so skip for now)
+        # In a real implementation, we would map underlyings to sectors and check concentration
+
+        # Check underlying concentration (already handled in the main evaluate method)
+        # but we'll keep it here for completeness
+        underlying_positions = [
+            p for p in positions
+            if signal.underlying in p.symbol or p.symbol.startswith(signal.underlying)
+        ]
+
+        if underlying_positions:
+            reasons.append(f"Underlying concentration: already holding {signal.underlying}")

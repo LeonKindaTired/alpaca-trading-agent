@@ -101,6 +101,16 @@ class AgentController:
             if settings is None:
                 settings = get_settings()
 
+            # Try to get enhanced status from the trading loop if available
+            latest_signals = []
+            market_regime = "UNKNOWN"
+            regime_confidence = 0.0
+            candidates_count = 0
+            qualified_count = 0
+
+            # Note: In a more sophisticated implementation, we would have a reference to the trading loop
+            # For now, we'll rely on the database for some information and keep simplified status
+
             return {
                 "status": "RUNNING",
                 "agent_mode": "AI SUPERVISOR" if settings.use_ai_supervisor else "QUANT ONLY",
@@ -116,6 +126,12 @@ class AgentController:
                     "execution": "Healthy",
                     "last_heartbeat": datetime.now(timezone.utc).isoformat(),
                 },
+                # Enhanced fields for dashboard
+                "latest_signals": latest_signals,
+                "market_regime": market_regime,
+                "regime_confidence": regime_confidence,
+                "candidates_count": candidates_count,
+                "qualified_count": qualified_count
             }
 
     def update_configuration(self, new_parameters: dict, changed_by: str = "dashboard") -> bool:

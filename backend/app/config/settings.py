@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     max_dte: int = 45
     loop_interval_seconds: int = 60
     max_consecutive_failures: int = 5
+    min_signal_score: int = 70
+
+    # Correlation and concentration limits
+    max_same_direction: int = 2
+    max_correlated_positions: int = 2
+    max_sector_concentration: float = 0.10
 
     underlyings: str = "SPY,QQQ,IWM"
     database_path: str = "data/agent.db"

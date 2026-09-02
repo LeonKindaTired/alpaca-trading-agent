@@ -1450,56 +1450,6 @@ elif page == "Agent Config":
             except Exception as e:
                 st.error(f"Error updating configuration: {e}")
 
-elif page == "Risk":
-
-            risk_data = fetch_api("/risk-summary")
-            if risk_data:
-                st.markdown(f"""
-                <div style="background-color: #1a1a1a; padding: 1.5rem; border-radius: 6px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem;">
-                        <div>Exposure</div>
-                        <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
-                            {risk_data.get('exposure', 0):.1f}%
-                        </div>
-                        <div>Max Exposure</div>
-                        <div style="text-align: right; color: #888888;">
-                            {risk_data.get('max_exposure', 0):.1f}%
-                        </div>
-                        <div>Daily Loss</div>
-                        <div style="text-align: right;
-                            color: {'#10b981' if risk_data.get('daily_loss', 0) <= risk_data.get('daily_limit', 3) else '#ef4444'};
-                            font-weight: 500;">
-                            {risk_data.get('daily_loss', 0):.2f}%
-                        </div>
-                        <div>Daily Limit</div>
-                        <div style="text-align: right; color: #888888;">
-                            {risk_data.get('daily_limit', 0):.1f}%
-                        </div>
-                        <div>Drawdown</div>
-                        <div style="text-align: right;
-                            color: {'#10b981' if risk_data.get('drawdown', 0) <= risk_data.get('max_drawdown', 10) else '#ef4444'};
-                            font-weight: 500;">
-                            {risk_data.get('drawdown', 0):.2f}%
-                        </div>
-                        <div>Max Drawdown</div>
-                        <div style="text-align: right; color: #888888;">
-                            {risk_data.get('max_drawdown', 0):.1f}%
-                        </div>
-                        <div>Open Positions</div>
-                        <div style="text-align: right; color: #e0e0e0; font-weight: 500;">
-                            {risk_data.get('open_positions', 0)}
-                        </div>
-                        <div>Maximum</div>
-                        <div style="text-align: right; color: #888888;">
-                            {risk_data.get('max_positions', 0)}
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="loading">Loading strategy data...</div>
-        """, unsafe_allow_html=True)
 
 elif page == "Risk":
     st.markdown("""

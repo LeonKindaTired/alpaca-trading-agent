@@ -13,7 +13,7 @@ from backend.app.data.models import Signal, OptionSnapshot
 from backend.app.database.db import Database
 from backend.app.execution.engine import ExecutionEngine
 from backend.app.risk.engine import RiskEngine
-from backend.app.strategies.liquid_momentum import LiquidMomentumStrategy
+from backend.app.strategies.multi_factor_strategy import MultiFactorStrategy
 from backend.app.ai.supervisor import create_ai_supervisor
 from backend.app.ai.base import AIInput, AIOutput
 import json
@@ -32,8 +32,8 @@ class TradingLoop:
         self.client = client
         self.db = Database(self.settings.database_path, self.settings)
         self.market = MarketDataService(client)
-        self.strategy = LiquidMomentumStrategy(self.market, self.settings)
-        self.risk = RiskEngine(self.settings)
+        self.strategy = MultiFactorStrategy(self.market, self.settings)
+        self.risk = RiskEngine(self.settings, self.market)
         self.execution = ExecutionEngine(client, self.db)
         # AI Supervisor: only create if use_ai_supervisor is True
         self.ai_supervisor = create_ai_supervisor(self.settings) if self.settings.use_ai_supervisor else None
@@ -48,6 +48,13 @@ class TradingLoop:
         self._consecutive_failures: int = 0
         self._shutdown_reason: str | None = None
         self._trading_halted: bool = False  # if True, no new positions but still monitor existing
+
+        # For dashboard enhancements
+        self._latest_signals: list = []
+        self._market_regime: str = "UNKNOWN"
+        self._regime_confidence: float = 0.0
+        self._candidates_count: int = 0
+        self._qualified_count: int = 0
 
     def _update_position_metadata(self, contract: str, order, position, signal, ai_decision):
         """Store metadata for a newly opened position."""
@@ -273,11 +280,54 @@ class TradingLoop:
             "positions": [p.model_dump(mode="json") for p in positions],
         }
 
+        # Calculate market regime for dashboard
+        spy_bars = self.market.bars("SPY", days=50) if "SPY" in self.settings.underlying_list else self.market.bars("SPY", days=50)
+        if spy_bars and len(spy_bars) >= 30:
+            spy_price = last_close(spy_bars)
+            spy_ma_200 = sma(spy_bars, 200)
+            spy_mom_50 = momentum(spy_bars, 50) if len(spy_bars) >= 51 else None
+            spy_atr = atr(spy_bars, 20)
+
+            regime = "RANGE_BOUND"  # Default
+            regime_confidence = 0.0
+
+            if spy_ma_200 and spy_mom_50 is not None and spy_price:
+                if spy_price > spy_ma_200 and spy_mom_50 > 0.05:
+                    regime = "BULL_TREND"
+                    regime_confidence = min(90.0, 60.0 + (spy_mom_50 * 100))
+                elif spy_price < spy_ma_200 and spy_mom_50 < -0.05:
+                    regime = "BEAR_TREND"
+                    regime_confidence = min(90.0, 60.0 + (abs(spy_mom_50) * 100))
+                else:
+                    regime = "RANGE_BOUND"
+                    regime_confidence = 70.0
+
+            # Check for high volatility
+            if spy_atr and spy_price:
+                spy_atr_percent = (spy_atr / spy_price) * 100
+                if spy_atr_percent > 5.0:
+                    regime = "HIGH_VOLATILITY"
+                    regime_confidence = min(85.0, 50.0 + (spy_atr_percent - 5.0) * 5.0)
+
+            self._market_regime = regime
+            self._regime_confidence = regime_confidence
+
+            # Store regime in system status for dashboard
+            self.db.set_system_status('market_regime', {
+                'regime': regime,
+                'confidence': regime_confidence
+            })
+
         self.log.info("About to generate signals")
         signals = self.strategy.generate_signals(market_state)
         self.log.info("Generated %d signal(s)", len(signals))
 
+        # Store signals for dashboard
+        self._latest_signals = signals
+        self._candidates_count = len(signals)
+
         actions: list[dict[str, Any]] = []
+        qualified_signals = 0
         for signal in signals:
             duplicate = bool(signal.contract and self.db.has_open_order(signal.contract))
 
@@ -412,6 +462,8 @@ class TradingLoop:
             }
             # Determine if we should submit new orders: only if trading not halted and submit flag is True
             effective_submit = submit and (not self._trading_halted) and self.settings.trading_enabled
+            if decision.approved:
+                qualified_signals += 1
             if decision.approved and effective_submit:
                 order = self.execution.execute(effective_signal, decision)
                 position = self.client.get_position(effective_signal.contract) if effective_signal.contract else None
@@ -465,6 +517,25 @@ class TradingLoop:
             if decision.approved and effective_submit:
                 # Refresh positions after order submission
                 positions = self.client.list_positions()
+
+        # Store qualified count for dashboard
+        self._qualified_count = qualified_signals
+
+        # Store signal metadata in system status for dashboard
+        self.db.set_system_status('signal_metadata', {
+            'candidates_count': self._candidates_count,
+            'qualified_count': self._qualified_count,
+            'latest_signals': [
+                {
+                    'underlying': s.underlying,
+                    'direction': s.direction,
+                    'confidence': s.confidence,
+                    'contract': s.contract,
+                    'thesis': s.thesis[:200] if s.thesis else ""  # Limit length
+                }
+                for s in signals[:10]  # Store top 10 signals
+            ]
+        })
 
         if not signals:
             self.db.journal(
