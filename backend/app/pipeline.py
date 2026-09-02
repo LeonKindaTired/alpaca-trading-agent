@@ -236,6 +236,11 @@ class TradingLoop:
             self.log.error("Failed to fetch account/positions: %s", e)
             return CycleResult(account={}, signals=[], actions=[])
 
+        from backend.app.features.engine import (
+    returns, realized_volatility, sma, ema,
+    momentum, volume_change, atr, rsi, last_close
+)
+
         self.log.info(
             "Account equity=%.2f buying_power=%.2f positions=%d trading_enabled=%s",
             account.equity,
@@ -342,11 +347,7 @@ class TradingLoop:
                 bars = self.market.bars(signal.underlying, days=30)
                 features = {}
                 if bars:
-                    from backend.app.features.engine import (
-                        returns, realized_volatility, sma, ema,
-                        momentum, volume_change, atr, rsi, last_close
-                    )
-
+                    
                     # Calculate various features
                     if len(bars) >= 2:
                         rets = returns(bars)
@@ -360,7 +361,8 @@ class TradingLoop:
                     features['volume_change_20'] = volume_change(bars, 20) or 0.0
                     features['atr_14'] = atr(bars, 14) or 0.0
                     features['rsi_14'] = rsi(bars, 14) or 50.0
-                    features['last_close'] = last_close(bars) or 0.0
+                    lc = last_close(bars) or 0.0
+                    features['last_close'] = lc
 
                     # Price relative to moving averages
                     if features['sma_20'] > 0:

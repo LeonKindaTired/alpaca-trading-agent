@@ -1,0 +1,91 @@
+Starting continuous trading loop... 
+Log file: logs\trading_20260902_202538.log 
+Press Ctrl+C to stop 
+============================================================ 
+[!CYCLE_TIME!] Starting trading cycle 
+C:\Users\user\alpaca-trading-agent\backend\app\ai\gemini_ai.py:7: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+2026-09-02 20:25:40,730 INFO [agent] Connected. equity=99865.91 status=AccountStatus.ACTIVE
+2026-09-02 20:25:41,380 INFO [agent] SPY quote bid=764.63 ask=764.66
+2026-09-02 20:25:41,687 INFO [agent] Account equity=99865.91 buying_power=395951.64 positions=3 trading_enabled=True
+2026-09-02 20:25:41,687 INFO [agent] Reset daily starting equity to 99865.91 for 2026-09-02
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\user\alpaca-trading-agent\backend\scripts\run_paper_cycle.py", line 50, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\user\alpaca-trading-agent\backend\scripts\run_paper_cycle.py", line 44, in main
+    result = loop.run_once(submit=not args.dry_run)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\alpaca-trading-agent\backend\app\pipeline.py", line 286, in run_once
+    spy_price = last_close(spy_bars)
+                ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'last_close' where it is not associated with a value
+============================================================ 
+ 
+[!CYCLE_TIME!] Starting trading cycle 
+C:\Users\user\alpaca-trading-agent\backend\app\ai\gemini_ai.py:7: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+2026-09-02 20:26:44,759 INFO [agent] Connected. equity=99854.91 status=AccountStatus.ACTIVE
+2026-09-02 20:26:45,407 INFO [agent] SPY quote bid=764.73 ask=764.76
+2026-09-02 20:26:45,720 INFO [agent] Account equity=99854.91 buying_power=395951.64 positions=3 trading_enabled=True
+2026-09-02 20:26:45,721 INFO [agent] Reset daily starting equity to 99854.91 for 2026-09-02
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\user\alpaca-trading-agent\backend\scripts\run_paper_cycle.py", line 50, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\user\alpaca-trading-agent\backend\scripts\run_paper_cycle.py", line 44, in main
+    result = loop.run_once(submit=not args.dry_run)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\alpaca-trading-agent\backend\app\pipeline.py", line 286, in run_once
+    spy_price = last_close(spy_bars)
+                ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'last_close' where it is not associated with a value
+============================================================ 
+ 
+[!CYCLE_TIME!] Starting trading cycle 
+C:\Users\user\alpaca-trading-agent\backend\app\ai\gemini_ai.py:7: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+2026-09-02 20:27:48,751 INFO [agent] Connected. equity=99864.91 status=AccountStatus.ACTIVE
+2026-09-02 20:27:49,394 INFO [agent] SPY quote bid=764.61 ask=764.64
+2026-09-02 20:27:49,694 INFO [agent] Account equity=99865.91 buying_power=395951.64 positions=3 trading_enabled=True
+2026-09-02 20:27:49,694 INFO [agent] Reset daily starting equity to 99865.91 for 2026-09-02
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\user\alpaca-trading-agent\backend\scripts\run_paper_cycle.py", line 50, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\Users\user\alpaca-trading-agent\backend\scripts\run_paper_cycle.py", line 44, in main
+    result = loop.run_once(submit=not args.dry_run)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\user\alpaca-trading-agent\backend\app\pipeline.py", line 286, in run_once
+    spy_price = last_close(spy_bars)
+                ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'last_close' where it is not associated with a value
+============================================================ 
+ 
