@@ -40,7 +40,10 @@ rem Main loop
 
     rem Change to root directory and execute trading cycle using venv Python
     pushd %~dp0..
-    "%~dp0..\venv\Scripts\python.exe" -m backend.scripts.run_paper_cycle >> "%LOG_FILE%" 2>&1
+    "%~dp0..\venv\Scripts\python.exe" -m backend.scripts.run_paper_cycle 2>&1 > "%LOG_DIR%\temp_output.log"
+    type "%LOG_DIR%\temp_output.log"
+    type "%LOG_DIR%\temp_output.log" >> "%LOG_FILE%"
+    del "%LOG_DIR%\temp_output.log"
     popd
 
     rem Add separator

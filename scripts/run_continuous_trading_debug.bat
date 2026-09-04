@@ -71,7 +71,10 @@ echo [DEBUG] Test entry at %date% %time% >> "%LOG_FILE%"
 
     :: Run the paper trading cycle and append output to log file
     echo [DEBUG] About to run: python -m backend.scripts.run_paper_cycle
-    python -m backend.scripts.run_paper_cycle >> "%LOG_FILE%" 2>&1
+    python -m backend.scripts.run_paper_cycle 2>&1 > "%LOG_DIR%\temp_output.log"
+    type "%LOG_DIR%\temp_output.log"
+    type "%LOG_DIR%\temp_output.log" >> "%LOG_FILE%"
+    del "%LOG_DIR%\temp_output.log"
     echo [DEBUG] Finished running python command
 
     :: Add a separator between cycles

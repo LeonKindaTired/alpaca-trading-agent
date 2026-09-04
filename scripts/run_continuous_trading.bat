@@ -34,7 +34,10 @@ echo ============================================================ >> "%LOG_FILE%
     echo [!CYCLE_TIME!] Starting trading cycle >> "%LOG_FILE%"
 
     :: Run the paper trading cycle and append output to log file
-    python -m backend.scripts.run_paper_cycle >> "%LOG_FILE%" 2>&1
+    python -m backend.scripts.run_paper_cycle 2>&1 > "%LOG_DIR%\temp_output.log"
+    type "%LOG_DIR%\temp_output.log"
+    type "%LOG_DIR%\temp_output.log" >> "%LOG_FILE%"
+    del "%LOG_DIR%\temp_output.log"
 
     :: Add a separator between cycles
     echo.

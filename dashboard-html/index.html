@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ALPHA — Autonomous Trading Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --bg: #080b12;
+        --panel: #0f141d;
+        --panel-2: #121925;
+        --border: rgba(148, 163, 184, 0.12);
+        --muted: #7f8ba3;
+        --text: #eef2f7;
+        --accent: #6366f1;
+        --accent-2: #818cf8;
+        --success: #34d399;
+        --danger: #fb7185;
+        --warning: #fbbf24;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--bg);
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        background: radial-gradient(
+            circle at 15% 0%,
+            rgba(99, 102, 241, 0.12),
+            transparent 30rem
+          ),
+          radial-gradient(
+            circle at 90% 15%,
+            rgba(56, 189, 248, 0.06),
+            transparent 26rem
+          ),
+          var(--bg);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: -0.01em;
+      }
+
+      /* Top navigation */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: rgba(8, 11, 18, 0.82) !important;
+        border-bottom: 1px solid var(--border) !important;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+
+      header .max-w-7xl {
+        max-width: 1440px;
+      }
+
+      header .h-16 {
+        height: 72px;
+      }
+
+      header .h-8.w-8 {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #818cf8, #4f46e5) !important;
+        box-shadow: 0 0 28px rgba(99, 102, 241, 0.35);
+        position: relative;
+        overflow: hidden;
+      }
+
+      header .h-8.w-8::after {
+        content: "";
+        position: absolute;
+        inset: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 6px;
+      }
+
+      header h3 {
+        font-size: 15px !important;
+        font-weight: 750 !important;
+        letter-spacing: 0.14em;
+      }
+
+      header p {
+        font-size: 11px !important;
+        margin-top: 2px;
+        color: #748198 !important;
+      }
+
+      #current-time {
+        color: #a8b2c4 !important;
+        font-size: 12px;
+      }
+
+      #market-status {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(148, 163, 184, 0.07);
+        border-color: rgba(148, 163, 184, 0.14);
+        color: #94a3b8;
+        white-space: nowrap;
+      }
+
+      #market-status.market-open {
+        background: rgba(52, 211, 153, 0.09);
+        border-color: rgba(52, 211, 153, 0.2);
+        color: #6ee7b7;
+      }
+
+      #market-status.market-closed {
+        background: rgba(148, 163, 184, 0.07);
+        border-color: rgba(148, 163, 184, 0.14);
+        color: #94a3b8;
+      }
+
+      #market-status-dot {
+        background: currentColor;
+        box-shadow: 0 0 8px currentColor;
+      }
+
+      header .bg-gray-800.text-gray-300 {
+        background: rgba(52, 211, 153, 0.08) !important;
+        color: #6ee7b7 !important;
+        border: 1px solid rgba(52, 211, 153, 0.18);
+        border-radius: 999px;
+        padding: 6px 10px !important;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+
+      /* Page width + tabs */
+      main.max-w-7xl {
+        max-width: 1440px;
+        padding-top: 28px;
+      }
+
+      main > .mb-8 {
+        margin-bottom: 24px !important;
+      }
+
+      main > .mb-8 > div {
+        display: inline-flex;
+        gap: 4px;
+        padding: 5px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(15, 20, 29, 0.72);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+      }
+
+      main > .mb-8 button {
+        border: 0 !important;
+        border-radius: 8px;
+        padding: 9px 14px !important;
+        color: #7f8ba3 !important;
+        font-size: 12px;
+        font-weight: 650;
+        transition: all 0.18s ease;
+      }
+
+      main > .mb-8 button:hover {
+        color: #e5e7eb !important;
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      main > .mb-8 button.border-indigo-500 {
+        color: #fff !important;
+        background: rgba(99, 102, 241, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.16);
+      }
+
+      /* Cards */
+      .bg-gray-800.rounded-lg.border,
+      .bg-gray-800.rounded-lg.p-4.border {
+        background: linear-gradient(
+          145deg,
+          rgba(18, 25, 37, 0.96),
+          rgba(12, 17, 26, 0.96)
+        ) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 14px !important;
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+        transition: border-color 0.2s ease, transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .bg-gray-800.rounded-lg.p-4.border:hover {
+        border-color: rgba(129, 140, 248, 0.18) !important;
+      }
+
+      /* KPI cards */
+      #portfolio-value,
+      #today-pnl,
+      #total-pnl,
+      #drawdown {
+        font-size: 26px !important;
+        line-height: 1.15;
+        letter-spacing: -0.035em;
+        margin-top: 7px;
+      }
+
+      #portfolio-change,
+      #today-pnl-percent,
+      #total-pnl-percent {
+        margin-top: 8px;
+      }
+
+      main .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 > div {
+        min-height: 128px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      main .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 > div::after {
+        content: "";
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        right: -45px;
+        bottom: -55px;
+        border-radius: 50%;
+        background: rgba(99, 102, 241, 0.08);
+        filter: blur(5px);
+      }
+
+      main
+        .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4
+        > div
+        > p:first-child {
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.11em;
+        color: #77839a !important;
+      }
+
+      /* Section headings */
+      h3 {
+        font-weight: 700 !important;
+        letter-spacing: -0.01em;
+      }
+
+      .bg-gray-800 > h3,
+      .bg-gray-800 > div > h3 {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .bg-gray-800 > h3::before,
+      .bg-gray-800 > div > h3::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #818cf8;
+        box-shadow: 0 0 10px rgba(129, 140, 248, 0.7);
+      }
+
+      /* Agent control */
+      #agent-status-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #agent-status-text::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 10px currentColor;
+      }
+
+      button.bg-indigo-600 {
+        background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+        border: 1px solid rgba(165, 180, 252, 0.18);
+        box-shadow: 0 8px 22px rgba(79, 70, 229, 0.22);
+        font-weight: 700;
+      }
+
+      button.bg-red-600 {
+        background: rgba(244, 63, 94, 0.11) !important;
+        color: #fb7185 !important;
+        border: 1px solid rgba(244, 63, 94, 0.2);
+        font-weight: 700;
+      }
+
+      button.bg-indigo-600:hover,
+      button.bg-red-600:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+      }
+
+      /* Chart */
+      .relative:has(> #equityChart) {
+        height: 280px;
+      }
+
+      #equityChart {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* Tables */
+      table {
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      thead.bg-gray-900 {
+        background: rgba(7, 10, 16, 0.72) !important;
+      }
+
+      thead th {
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+        font-size: 9px !important;
+        letter-spacing: 0.12em;
+        color: #69768c !important;
+        border-bottom: 1px solid var(--border);
+      }
+
+      tbody.bg-gray-800 {
+        background: transparent !important;
+      }
+
+      tbody tr {
+        transition: background 0.15s ease;
+      }
+
+      tbody tr:hover {
+        background: rgba(99, 102, 241, 0.045) !important;
+      }
+
+      tbody td {
+        border-color: var(--border) !important;
+        color: #cbd5e1;
+      }
+
+      /* Nested panels / risk meters / config */
+      .bg-gray-900.rounded-lg {
+        background: rgba(7, 10, 16, 0.55) !important;
+        border: 1px solid rgba(148, 163, 184, 0.08);
+      }
+
+      #exposure-bar,
+      #daily-loss-bar,
+      #drawdown-bar {
+        box-shadow: 0 0 12px currentColor;
+        transition: width 0.5s ease;
+      }
+
+      .h-2\.5 {
+        height: 7px !important;
+      }
+
+      /* Activity feed */
+      #activity-feed > div,
+      #detailed-activity-feed > div,
+      #risk-decisions-list > div {
+        border-color: var(--border) !important;
+      }
+
+      /* Status chips generated by the app */
+      .bg-indigo-100 {
+        background: rgba(99, 102, 241, 0.12) !important;
+        color: #a5b4fc !important;
+      }
+      .bg-green-100 {
+        background: rgba(52, 211, 153, 0.1) !important;
+        color: #6ee7b7 !important;
+      }
+      .bg-red-100 {
+        background: rgba(248, 113, 113, 0.1) !important;
+        color: #fda4af !important;
+      }
+      .bg-yellow-100 {
+        background: rgba(251, 191, 36, 0.1) !important;
+        color: #fcd34d !important;
+      }
+      .bg-purple-100 {
+        background: rgba(192, 132, 252, 0.1) !important;
+        color: #d8b4fe !important;
+      }
+
+      /* Responsive polish */
+      @media (max-width: 768px) {
+        main.max-w-7xl {
+          padding-top: 18px;
+        }
+        main > .mb-8 {
+          overflow-x: auto;
+        }
+        main > .mb-8 > div {
+          min-width: max-content;
+        }
+        main > .mb-8 button {
+          padding: 8px 11px !important;
+        }
+        header .hidden.md\:flex {
+          display: none;
+        }
+        .relative:has(> #equityChart) {
+          height: 220px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+
+      /* Subtle scrollbar */
+      ::-webkit-scrollbar {
+        width: 9px;
+        height: 9px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #080b12;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #252d3b;
+        border-radius: 999px;
+        border: 2px solid #080b12;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #343e50;
+      }
+    </style>
+  </head>
+  <body class="font-inter bg-gray-900 text-gray-100" x-data="dashboard()">
+    <div class="min-h-screen">
+      <!-- Header -->
+      <header class="bg-gray-800 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-16">
+            <div class="flex items-center space-x-4">
+              <div class="flex-shrink-0">
+                <div class="h-8 w-8 bg-indigo-600 rounded"></div>
+              </div>
+              <div>
+                <h3 class="text-lg font-medium text-white">ALPHA</h3>
+                <p class="text-sm text-gray-400">Autonomous Options Agent</p>
+              </div>
+            </div>
+            <div class="hidden md:flex items-center space-x-6">
+              <!-- Navigation will go here -->
+            </div>
+            <div class="flex items-center space-x-3">
+              <div class="text-sm text-gray-400">
+                <span id="current-time" class="font-mono">--:--:-- ET</span>
+              </div>
+              <div
+                id="market-status"
+                class="px-2.5 py-1.5 text-xs rounded-full font-semibold border"
+              >
+                <span
+                  id="market-status-dot"
+                  class="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
+                ></span>
+                <span id="market-status-text">MARKET CLOSED</span>
+              </div>
+              <div class="px-2 py-1 text-xs rounded bg-gray-800 text-gray-300">
+                PAPER TRADING
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Tabs -->
+        <div class="mb-8">
+          <div class="flex border-b border-gray-700">
+            <button
+              @click="activeTab = 'overview'"
+              :class="{'border-b-2 border-indigo-500 text-white': activeTab === 'overview', 'border-b-2 border-transparent text-gray-400 hover:text-white': activeTab !== 'overview'}"
+              class="px-4 py-2"
+            >
+              Overview
+            </button>
+            <button
+              @click="activeTab = 'positions'"
+              :class="{'border-b-2 border-indigo-500 text-white': activeTab === 'positions', 'border-b-2 border-transparent text-gray-400 hover:text-white': activeTab !== 'positions'}"
+              class="px-4 py-2"
+            >
+              Positions
+            </button>
+            <button
+              @click="activeTab = 'trades'"
+              :class="{'border-b-2 border-indigo-500 text-white': activeTab === 'trades', 'border-b-2 border-transparent text-gray-400 hover:text-white': activeTab !== 'trades'}"
+              class="px-4 py-2"
+            >
+              Trades
+            </button>
+            <button
+              @click="activeTab = 'activity'"
+              :class="{'border-b-2 border-indigo-500 text-white': activeTab === 'activity', 'border-b-2 border-transparent text-gray-400 hover:text-white': activeTab !== 'activity'}"
+              class="px-4 py-2"
+            >
+              Agent Activity
+            </button>
+            <button
+              @click="activeTab = 'risk'"
+              :class="{'border-b-2 border-indigo-500 text-white': activeTab === 'risk', 'border-b-2 border-transparent text-gray-400 hover:text-white': activeTab !== 'risk'}"
+              class="px-4 py-2"
+            >
+              Risk Management
+            </button>
+            <button
+              @click="activeTab = 'config'"
+              :class="{'border-b-2 border-indigo-500 text-white': activeTab === 'config', 'border-b-2 border-transparent text-gray-400 hover:text-white': activeTab !== 'config'}"
+              class="px-4 py-2"
+            >
+              Agent Config
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div x-show="activeTab === 'overview'" class="space-y-6">
+          <!-- Overview Content -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Portfolio Value -->
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <p class="text-sm text-gray-400">PORTFOLIO VALUE</p>
+              <p class="text-2xl font-bold text-white" id="portfolio-value">
+                $0.00
+              </p>
+              <p class="text-sm" id="portfolio-change">+0.00%</p>
+            </div>
+            <!-- Today's P&L -->
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <p class="text-sm text-gray-400">TODAY'S P&L</p>
+              <p class="text-2xl font-bold text-white" id="today-pnl">$0.00</p>
+              <p class="text-sm" id="today-pnl-percent">+0.00%</p>
+            </div>
+            <!-- Total P&L -->
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <p class="text-sm text-gray-400">TOTAL P&L</p>
+              <p class="text-2xl font-bold text-white" id="total-pnl">$0.00</p>
+              <p class="text-sm" id="total-pnl-percent">+0.00%</p>
+            </div>
+            <!-- Drawdown -->
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <p class="text-sm text-gray-400">DRAWDOWN</p>
+              <p class="text-2xl font-bold text-white" id="drawdown">0.00%</p>
+              <p class="text-sm text-gray-400">Max: 8.00%</p>
+            </div>
+          </div>
+
+          <!-- Agent Control -->
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="text-lg font-medium text-white mb-2">
+                  AGENT CONTROL
+                </h3>
+                <p class="text-sm text-gray-400" id="agent-status-text">
+                  Agent is currently STOPPED
+                </p>
+              </div>
+              <div class="space-x-2">
+                <button
+                  @click="startAgent()"
+                  :disabled="agentRunning"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
+                >
+                  Start Agent
+                </button>
+                <button
+                  @click="stopAgent()"
+                  :disabled="!agentRunning"
+                  class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
+                >
+                  Stop Agent
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Equity Curve -->
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">EQUITY CURVE</h3>
+            <div class="relative">
+              <canvas id="equityChart" height="200"></canvas>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500 mt-2">
+              <span>1D</span>
+              <span>1W</span>
+              <span>1M</span>
+              <span>ALL</span>
+            </div>
+          </div>
+
+          <!-- Live Agent Activity -->
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">
+              LIVE AGENT ACTIVITY
+            </h3>
+            <div class="space-y-3" id="activity-feed">
+              <!-- Activity items will be inserted here -->
+              <div class="text-center py-8 text-gray-500">
+                Loading agent activity...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Positions Tab -->
+        <div x-show="activeTab === 'positions'" class="space-y-6">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">
+              CURRENT POSITIONS
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-900">
+                  <tr>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Underlying
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Contract
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Side
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Qty
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Entry
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Mark
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      P&L
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      P&L %
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Exp
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  class="bg-gray-800 divide-y divide-gray-700"
+                  id="positions-table-body"
+                >
+                  <!-- Position rows will be inserted here -->
+                  <tr class="hover:bg-gray-700">
+                    <td colspan="9" class="px-6 py-4 text-center text-gray-500">
+                      No open positions
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trades Tab -->
+        <div x-show="activeTab === 'trades'" class="space-y-6">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">TRADE HISTORY</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-900">
+                  <tr>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Time
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Underlying
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Contract
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Strategy
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Action
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Entry
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Exit
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      P&L
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Duration
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                    >
+                      Reason
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  class="bg-gray-800 divide-y divide-gray-700"
+                  id="trades-table-body"
+                >
+                  <!-- Trade rows will be inserted here -->
+                  <tr class="hover:bg-gray-700">
+                    <td
+                      colspan="10"
+                      class="px-6 py-4 text-center text-gray-500"
+                    >
+                      No trades yet
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent Activity Tab -->
+        <div x-show="activeTab === 'activity'" class="space-y-6">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">
+              AGENT ACTIVITY DETAIL
+            </h3>
+            <div class="space-y-4" id="detailed-activity-feed">
+              <!-- Detailed activity items will be inserted here -->
+              <div class="text-center py-8 text-gray-500">
+                Loading agent activity...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Management Tab -->
+        <div x-show="activeTab === 'risk'" class="space-y-6">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">RISK EXPOSURE</h3>
+            <div class="grid grid-cols-1 gap-4">
+              <!-- Portfolio Exposure -->
+              <div class="bg-gray-900 rounded-lg p-4">
+                <p class="text-sm font-medium text-gray-400 mb-2">
+                  Portfolio Exposure
+                </p>
+                <div class="flex w-full bg-gray-800 rounded-full h-2.5 mb-2">
+                  <div
+                    id="exposure-bar"
+                    class="h-2.5 bg-indigo-600 rounded-full"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-400">
+                  <span>Exposure</span>
+                  <span id="exposure-percent">0% / 40%</span>
+                </div>
+              </div>
+              <!-- Daily Loss -->
+              <div class="bg-gray-900 rounded-lg p-4">
+                <p class="text-sm font-medium text-gray-400 mb-2">Daily Loss</p>
+                <div class="flex w-full bg-gray-800 rounded-full h-2.5 mb-2">
+                  <div
+                    id="daily-loss-bar"
+                    class="h-2.5 bg-red-600 rounded-full"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-400">
+                  <span>Daily Loss</span>
+                  <span id="daily-loss-percent">0% / 3%</span>
+                </div>
+              </div>
+              <!-- Drawdown -->
+              <div class="bg-gray-900 rounded-lg p-4">
+                <p class="text-sm font-medium text-gray-400 mb-2">Drawdown</p>
+                <div class="flex w-full bg-gray-800 rounded-full h-2.5 mb-2">
+                  <div
+                    id="drawdown-bar"
+                    class="h-2.5 bg-orange-600 rounded-full"
+                    style="width: 0%"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-400">
+                  <span>Drawdown</span>
+                  <span id="drawdown-percent">0% / 10%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">
+              RECENT RISK DECISIONS
+            </h3>
+            <div class="space-y-3" id="risk-decisions-list">
+              <!-- Risk decisions will be inserted here -->
+              <div class="text-center py-8 text-gray-500">
+                No recent risk decisions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent Config Tab -->
+        <div x-show="activeTab === 'config'" class="space-y-6">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-medium text-white mb-4">
+              AGENT CONFIGURATION
+            </h3>
+            <!-- Configuration form will go here -->
+            <div class="text-center py-8 text-gray-500">
+              Loading configuration...
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // Chart.js must receive plain, non-reactive data. Alpine can wrap arrays/objects
+      // in Proxies, which causes Chart.js 4.x to recurse indefinitely.
+      function toPlainChartData(value) {
+        if (value == null) return value;
+        try {
+          return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+          return Array.isArray(value) ? Array.from(value) : value;
+        }
+      }
+    </script>
+    <script>
+      // Chart.js instances must live outside Alpine's reactive state. Alpine wraps
+      // returned objects in Proxies, and Chart.js internally traverses its own
+      // circular object graph; proxying the Chart instance causes infinite recursion.
+      let equityChartInstance = null;
+
+      function dashboard() {
+        return {
+          activeTab: "overview",
+          agentRunning: false,
+
+          init() {
+            // Initialize synchronous UI pieces first. The data calls below are async.
+            this.initTime();
+            this.initEquityChart();
+
+            this.fetchOverviewData();
+            this.fetchAgentStatus();
+            this.fetchEquityCurve();
+            this.fetchLiveActivity();
+            this.fetchPositions();
+            this.fetchTrades();
+            this.fetchRiskSummary();
+            this.fetchAgentConfig();
+
+            // Set up periodic updates
+            setInterval(() => {
+              this.fetchOverviewData();
+              this.fetchAgentStatus();
+              this.fetchLiveActivity();
+              this.fetchPositions();
+              this.fetchTrades();
+              this.fetchRiskSummary();
+              this.fetchAgentConfig();
+            }, 30000); // 30 seconds
+          },
+
+          initTime() {
+            const updateClockAndMarket = () => {
+              const now = new Date();
+
+              const timeString = now.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+                timeZone: "America/New_York",
+              });
+
+              const timeEl = document.getElementById("current-time");
+              if (timeEl) timeEl.textContent = timeString + " ET";
+
+              // Regular US equity/options market hours: Monday-Friday, 09:30-16:00 ET.
+              // This intentionally reflects regular-session hours; exchange holidays
+              // are not inferred client-side.
+              const parts = new Intl.DateTimeFormat("en-US", {
+                timeZone: "America/New_York",
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              }).formatToParts(now);
+
+              const getPart = (type) =>
+                parts.find((p) => p.type === type)?.value;
+              const weekday = getPart("weekday");
+              const hour = Number(getPart("hour"));
+              const minute = Number(getPart("minute"));
+              const minutes = hour * 60 + minute;
+
+              const weekdayOpen = ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(
+                weekday
+              );
+              const isOpen = weekdayOpen && minutes >= 570 && minutes < 960;
+
+              const marketEl = document.getElementById("market-status");
+              const marketText = document.getElementById("market-status-text");
+
+              if (marketEl && marketText) {
+                marketEl.classList.toggle("market-open", isOpen);
+                marketEl.classList.toggle("market-closed", !isOpen);
+                marketText.textContent = isOpen
+                  ? "MARKET OPEN"
+                  : "MARKET CLOSED";
+              }
+            };
+
+            updateClockAndMarket();
+            setInterval(updateClockAndMarket, 1000);
+          },
+
+          initEquityChart() {
+            const canvas = document.getElementById("equityChart");
+            if (!canvas || typeof Chart === "undefined") return;
+
+            // Prevent duplicate Chart instances if Alpine re-initializes the component.
+            if (equityChartInstance) {
+              equityChartInstance.destroy();
+              equityChartInstance = null;
+            }
+
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+
+            equityChartInstance = new Chart(ctx, {
+              type: "line",
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: "Portfolio Value",
+                    data: [],
+                    borderColor: "#10b981",
+                    backgroundColor: "rgba(16, 185, 129, 0.08)",
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    tension: 0.25,
+                    fill: true,
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                  mode: "index",
+                  intersect: false,
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    displayColors: false,
+                    callbacks: {
+                      label: (context) => {
+                        const value = Number(context.parsed.y);
+                        return Number.isFinite(value)
+                          ? "$" +
+                              value.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })
+                          : "Portfolio Value";
+                      },
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    border: { display: false },
+                    grid: { display: false },
+                    ticks: {
+                      color: "#69768c",
+                      maxTicksLimit: 7,
+                    },
+                  },
+                  y: {
+                    border: { display: false },
+                    grid: { color: "rgba(148, 163, 184, 0.08)" },
+                    ticks: {
+                      color: "#69768c",
+                      callback: (value) => "$" + Number(value).toLocaleString(),
+                    },
+                  },
+                },
+              },
+            });
+          },
+
+          async fetchOverviewData() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/overview"
+              );
+              const data = await response.json();
+
+              document.getElementById("portfolio-value").textContent =
+                "$" +
+                data.portfolio_value.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              document.getElementById("portfolio-change").textContent =
+                data.total_pnl_percent.toFixed(2) + "%";
+              document.getElementById("portfolio-change").className =
+                "text-sm " +
+                (data.total_pnl_percent >= 0
+                  ? "text-green-400"
+                  : "text-red-400");
+
+              document.getElementById("today-pnl").textContent =
+                "$" +
+                data.today_pnl.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              document.getElementById("today-pnl-percent").textContent =
+                data.today_pnl_percent.toFixed(2) + "%";
+              document.getElementById("today-pnl-percent").className =
+                "text-sm " +
+                (data.today_pnl >= 0 ? "text-green-400" : "text-red-400");
+
+              document.getElementById("total-pnl").textContent =
+                "$" +
+                data.total_pnl.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                });
+              document.getElementById("total-pnl-percent").textContent =
+                data.total_pnl_percent.toFixed(2) + "%";
+              document.getElementById("total-pnl-percent").className =
+                "text-sm " +
+                (data.total_pnl >= 0 ? "text-green-400" : "text-red-400");
+
+              document.getElementById("drawdown").textContent =
+                data.drawdown.toFixed(2) + "%";
+            } catch (error) {
+              console.error("Error fetching overview data:", error);
+              // Show demo data on error
+              this.showDemoOverviewData();
+            }
+          },
+
+          async fetchAgentStatus() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/agent-status",
+                {
+                  cache: "no-store",
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+
+              const data = await response.json();
+
+              // Accept the common response shapes used by the backend.
+              const rawStatus = String(
+                data?.status ??
+                  data?.state ??
+                  (typeof data?.running === "boolean"
+                    ? data.running
+                      ? "RUNNING"
+                      : "STOPPED"
+                    : "") ??
+                  ""
+              ).toUpperCase();
+
+              const isRunning =
+                rawStatus === "RUNNING" ||
+                rawStatus === "ACTIVE" ||
+                data?.running === true ||
+                data?.is_running === true;
+
+              const isStopped =
+                rawStatus === "STOPPED" ||
+                rawStatus === "INACTIVE" ||
+                rawStatus === "IDLE" ||
+                data?.running === false ||
+                data?.is_running === false;
+
+              // Never keep displaying RUNNING when the backend response does not
+              // explicitly confirm that state.
+              if (!isRunning && !isStopped) {
+                this.agentRunning = false;
+                this.setAgentStatusUI("UNKNOWN", "text-gray-400");
+                return;
+              }
+
+              this.agentRunning = isRunning;
+              this.setAgentStatusUI(
+                isRunning ? "RUNNING" : "STOPPED",
+                isRunning ? "text-green-400" : "text-gray-400"
+              );
+            } catch (error) {
+              console.error("Error fetching agent status:", error);
+              // A failed status request must never leave an old RUNNING state on screen.
+              this.agentRunning = false;
+              this.setAgentStatusUI("UNKNOWN", "text-gray-400");
+            }
+          },
+
+          setAgentStatusUI(status, colorClass) {
+            const statusEl = document.getElementById("agent-status-text");
+            if (!statusEl) return;
+
+            const labels = {
+              RUNNING: "Agent is currently RUNNING",
+              STOPPED: "Agent is currently STOPPED",
+              UNKNOWN: "Agent status unavailable",
+            };
+
+            statusEl.textContent = labels[status] || labels.UNKNOWN;
+            statusEl.className = "text-sm " + colorClass;
+          },
+
+          async fetchEquityCurve() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/equity-curve"
+              );
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+              const payload = await response.json();
+              const rows = Array.isArray(payload) ? payload : payload?.data;
+
+              if (!Array.isArray(rows))
+                throw new Error("Invalid equity curve response");
+
+              const labels = [];
+              const values = [];
+
+              rows.forEach((item) => {
+                const equity = Number(item?.equity);
+                if (!Number.isFinite(equity)) return;
+
+                labels.push(item?.date ?? item?.timestamp ?? "");
+                values.push(equity);
+              });
+
+              if (!equityChartInstance) this.initEquityChart();
+              if (!equityChartInstance || !values.length) {
+                this.showDemoEquityCurve();
+                return;
+              }
+
+              // Pass only plain arrays into Chart.js; never pass Alpine state/Proxies.
+              equityChartInstance.data.labels = labels.slice();
+              equityChartInstance.data.datasets[0].data = values.slice();
+              equityChartInstance.update("none");
+            } catch (error) {
+              console.error("Error fetching equity curve:", error);
+              this.showDemoEquityCurve();
+            }
+          },
+
+          async fetchLiveActivity() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/live-activity"
+              );
+              const activities = await response.json();
+
+              const activityFeed = document.getElementById("activity-feed");
+              if (activities.length === 0) {
+                activityFeed.innerHTML =
+                  '<div class="text-center py-8 text-gray-500">No recent activity</div>';
+                return;
+              }
+
+              activityFeed.innerHTML = activities
+                .map((activity) => {
+                  const time = new Date(activity.timestamp).toLocaleTimeString(
+                    [],
+                    { hour: "2-digit", minute: "2-digit" }
+                  );
+                  const typeClass = this.getActivityTypeClass(
+                    activity.event_type
+                  );
+                  const typeLabel = this.getActivityTypeLabel(
+                    activity.event_type
+                  );
+
+                  return `
+                                <div class="flex items-start space-x-3 py-2 border-b border-gray-700 last:border-b-0">
+                                    <div class="text-xs text-gray-500 whitespace-nowrap">${time}</div>
+                                    <div class="flex-1 space-y-1">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-2 py-0.5 text-xs rounded-full ${typeClass}">${typeLabel}</span>
+                                            <span class="text-xs text-gray-400">${
+                                              activity.underlying
+                                            }</span>
+                                        </div>
+                                        <p class="text-sm text-gray-200">${
+                                          activity.description
+                                        }</p>
+                                        ${
+                                          activity.confidence !== undefined
+                                            ? '<div class="text-xs text-gray-500 ml-8">Confidence: ' +
+                                              (
+                                                activity.confidence * 100
+                                              ).toFixed(0) +
+                                              "%</div>"
+                                            : ""
+                                        }
+                                    </div>
+                                </div>
+                            `;
+                })
+                .join("");
+            } catch (error) {
+              console.error("Error fetching live activity:", error);
+              this.showDemoLiveActivity();
+            }
+          },
+
+          async fetchPositions() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/positions"
+              );
+              const positions = await response.json();
+
+              const tbody = document.getElementById("positions-table-body");
+              if (positions.length === 0) {
+                tbody.innerHTML =
+                  '<tr><td colspan="9" class="px-6 py-4 text-center text-gray-500">No open positions</td></tr>';
+                return;
+              }
+
+              tbody.innerHTML = positions
+                .map((pos) => {
+                  const pnl = Number(pos?.unrealized_pl ?? 0);
+                  const pnlPct = Number(pos?.unrealized_pl_percent ?? 0);
+                  const entry = Number(pos?.entry_price ?? 0);
+                  const current = Number(pos?.current_price ?? 0);
+                  const quantity = Number(pos?.quantity ?? 0);
+                  const symbol = String(pos?.symbol ?? "—");
+                  const contract =
+                    String(pos?.contract ?? pos?.option_symbol ?? "—").trim() ||
+                    "—";
+                  const side = String(pos?.side ?? "—").toUpperCase();
+                  const pnlClass = pnl >= 0 ? "text-green-400" : "text-red-400";
+                  const sideClass =
+                    side === "BUY"
+                      ? "text-green-400"
+                      : side === "SELL"
+                      ? "text-red-400"
+                      : "text-gray-300";
+                  return `
+                                <tr class="hover:bg-gray-700">
+                                    <td class="px-6 py-3 text-sm font-medium">${symbol}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${contract}</td>
+                                    <td class="px-6 py-3 text-sm font-medium ${sideClass}">${side}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${
+                                      Number.isFinite(quantity) ? quantity : "—"
+                                    }</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${
+                                      Number.isFinite(entry)
+                                        ? "$" + entry.toFixed(2)
+                                        : "—"
+                                    }</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${
+                                      Number.isFinite(current)
+                                        ? "$" + current.toFixed(2)
+                                        : "—"
+                                    }</td>
+                                    <td class="px-6 py-3 text-sm font-medium ${pnlClass}">${
+                    Number.isFinite(pnl) ? "$" + pnl.toFixed(2) : "—"
+                  }</td>
+                                    <td class="px-6 py-3 text-sm font-medium ${pnlClass}">${
+                    Number.isFinite(pnlPct) ? pnlPct.toFixed(2) + "%" : "—"
+                  }</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${
+                                      symbol.length >= 12
+                                        ? symbol.slice(6, 12)
+                                        : "—"
+                                    }</td>
+                                </tr>
+                            `;
+                })
+                .join("");
+            } catch (error) {
+              console.error("Error fetching positions:", error);
+              this.showDemoPositions();
+            }
+          },
+
+          async fetchTrades() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/trades"
+              );
+              const trades = await response.json();
+
+              const tbody = document.getElementById("trades-table-body");
+              if (trades.length === 0) {
+                tbody.innerHTML =
+                  '<tr><td colspan="10" class="px-6 py-4 text-center text-gray-500">No trades yet</td></tr>';
+                return;
+              }
+
+              tbody.innerHTML = trades
+                .slice(0, 10)
+                .map((trade) => {
+                  const time = new Date(trade.timestamp).toLocaleTimeString(
+                    [],
+                    { hour: "2-digit", minute: "2-digit" }
+                  );
+                  const pnlClass =
+                    trade.pnl >= 0 ? "text-green-400" : "text-red-400";
+                  const actionClass =
+                    trade.side === "buy" ? "text-green-400" : "text-red-400";
+
+                  return `
+                                <tr class="hover:bg-gray-700">
+                                    <td class="px-6 py-3 text-sm font-medium">${time}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${
+                                      trade.symbol
+                                    }</td>
+                                    <td class="px-6 py-3 text-sm font-medium">${
+                                      trade.contract || trade.symbol
+                                    }</td>
+                                    <td class="px-6 py-3 text-sm font-medium">Multi-Factor</td>
+                                    <td class="px-6 py-3 text-sm font-medium ${actionClass}">${trade.side.toUpperCase()}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">$${trade.filled_avg_price.toFixed(
+                                      2
+                                    )}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">$${(
+                                      trade.filled_avg_price * 1.1
+                                    ).toFixed(2)}</td>
+                                    <td class="px-6 py-3 text-sm font-medium ${pnlClass}">$${trade.pnl.toFixed(
+                    2
+                  )}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">2h 15m</td>
+                                    <td class="px-6 py-3 text-sm font-medium text-gray-400">${
+                                      trade.status === "filled"
+                                        ? "Signal executed"
+                                        : "Risk rejected"
+                                    }</td>
+                                </tr>
+                            `;
+                })
+                .join("");
+            } catch (error) {
+              console.error("Error fetching trades:", error);
+              this.showDemoTrades();
+            }
+          },
+
+          async fetchRiskSummary() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/risk-summary"
+              );
+              const data = await response.json();
+
+              // Update exposure bar
+              const exposurePercent = Math.min(
+                data.exposure,
+                data.max_exposure
+              );
+              const exposureWidth = (exposurePercent / data.max_exposure) * 100;
+              document.getElementById("exposure-bar").style.width =
+                exposureWidth + "%";
+              document.getElementById("exposure-percent").textContent =
+                exposurePercent.toFixed(1) + "% / " + data.max_exposure + "%";
+
+              // Update daily loss bar
+              const dailyLossPercent = Math.min(
+                data.daily_loss,
+                data.daily_limit
+              );
+              const dailyLossWidth =
+                (dailyLossPercent / data.daily_limit) * 100;
+              document.getElementById("daily-loss-bar").style.width =
+                dailyLossWidth + "%";
+              document.getElementById("daily-loss-percent").textContent =
+                data.daily_loss.toFixed(2) + "% / " + data.daily_limit + "%";
+
+              // Update drawdown bar
+              const drawdownPercent = Math.min(
+                data.drawdown,
+                data.max_drawdown
+              );
+              const drawdownWidth = (drawdownPercent / data.max_drawdown) * 100;
+              document.getElementById("drawdown-bar").style.width =
+                drawdownWidth + "%";
+              document.getElementById("drawdown-percent").textContent =
+                data.drawdown.toFixed(2) + "% / " + data.max_drawdown + "%";
+            } catch (error) {
+              console.error("Error fetching risk summary:", error);
+              this.showDemoRiskSummary();
+            }
+          },
+
+          async fetchAgentConfig() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/agent/config"
+              );
+              const config = await response.json();
+
+              const configContainer = document.querySelector(
+                "[x-show=\"activeTab === 'config'\"] .bg-gray-800.rounded-lg.p-4.border.border-gray-700"
+              );
+              configContainer.innerHTML = `
+                            <h3 class="text-lg font-medium text-white mb-4">AGENT CONFIGURATION</h3>
+                            <div class="space-y-4">
+                                <div class="bg-gray-900 rounded-lg p-4">
+                                    <p class="text-sm font-medium text-gray-400 mb-2">Trading Parameters</p>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+                                        <div>
+                                            <span class="text-gray-400">Trading Enabled</span>
+                                            <p class="text-white">${
+                                              config.trading_enabled
+                                                ? "ENABLED"
+                                                : "DISABLED"
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Max Risk Per Trade</span>
+                                            <p class="text-white">${(
+                                              config.max_risk_per_trade * 100
+                                            ).toFixed(2)}%</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Max Portfolio Exposure</span>
+                                            <p class="text-white">${(
+                                              config.max_portfolio_exposure *
+                                              100
+                                            ).toFixed(2)}%</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Max Daily Loss</span>
+                                            <p class="text-white">${(
+                                              config.max_daily_loss * 100
+                                            ).toFixed(2)}%</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Max Drawdown</span>
+                                            <p class="text-white">${(
+                                              config.max_drawdown * 100
+                                            ).toFixed(2)}%</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Max Positions</span>
+                                            <p class="text-white">${
+                                              config.max_positions
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Min DTE</span>
+                                            <p class="text-white">${
+                                              config.min_dte
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Max DTE</span>
+                                            <p class="text-white">${
+                                              config.max_dte
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Loop Interval</span>
+                                            <p class="text-white">${
+                                              config.loop_interval_seconds
+                                            }s</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-900 rounded-lg p-4">
+                                    <p class="text-sm font-medium text-gray-400 mb-2">AI Parameters</p>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+                                        <div>
+                                            <span class="text-gray-400">AI Enabled</span>
+                                            <p class="text-white">${
+                                              config.ai_enabled
+                                                ? "ENABLED"
+                                                : "DISABLED"
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">Use AI Supervisor</span>
+                                            <p class="text-white">${
+                                              config.use_ai_supervisor
+                                                ? "ENABLED"
+                                                : "DISABLED"
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">AI Model</span>
+                                            <p class="text-white">${
+                                              config.ai_model
+                                            }</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-400">AI Temperature</span>
+                                            <p class="text-white">${
+                                              config.ai_temperature
+                                            }</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-900 rounded-lg p-4">
+                                    <p class="text-sm font-medium text-gray-400 mb-2">Environment</p>
+                                    <div class="text-sm">
+                                        <span class="text-gray-400">Alpaca Mode</span>
+                                        <p class="text-white">${
+                                          config.alpaca_paper
+                                            ? "PAPER TRADING"
+                                            : "LIVE TRADING"
+                                        }</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            } catch (error) {
+              console.error("Error fetching agent config:", error);
+              this.showDemoAgentConfig();
+            }
+          },
+
+          async startAgent() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/agent/start",
+                {
+                  method: "POST",
+                }
+              );
+              if (response.ok) {
+                this.agentRunning = true;
+                this.setAgentStatusUI("RUNNING", "text-green-400");
+                // Refresh status
+                this.fetchAgentStatus();
+              } else {
+                alert("Failed to start agent");
+              }
+            } catch (error) {
+              console.error("Error starting agent:", error);
+              alert("Error starting agent");
+            }
+          },
+
+          async stopAgent() {
+            try {
+              const response = await fetch(
+                "http://localhost:8000/api/dashboard/agent/stop",
+                {
+                  method: "POST",
+                }
+              );
+              if (response.ok) {
+                this.agentRunning = false;
+                this.setAgentStatusUI("STOPPED", "text-gray-400");
+                // Refresh status
+                this.fetchAgentStatus();
+              } else {
+                // Some backends return 400 when the agent is already stopped.
+                // Treat that state as idempotent and refresh the real status.
+                const message = await response.text().catch(() => "");
+                if (
+                  response.status === 400 &&
+                  /agent is not running/i.test(message)
+                ) {
+                  // Idempotent: the desired end state is already true.
+                  this.agentRunning = false;
+                  this.setAgentStatusUI("STOPPED", "text-gray-400");
+                  return;
+                } else {
+                  console.error(
+                    "Failed to stop agent:",
+                    response.status,
+                    message
+                  );
+                  alert("Failed to stop agent");
+                }
+              }
+            } catch (error) {
+              console.error("Error stopping agent:", error);
+              alert("Error stopping agent");
+            }
+          },
+
+          getActivityTypeClass(type) {
+            switch (type) {
+              case "signal":
+                return "bg-indigo-100 text-indigo-200";
+              case "ai_decision":
+                return "bg-green-100 text-green-200";
+              case "risk_approved":
+                return "bg-green-100 text-green-200";
+              case "risk_rejected":
+                return "bg-red-100 text-red-200";
+              case "execution":
+                return "bg-yellow-100 text-yellow-200";
+              case "exit":
+                return "bg-purple-100 text-purple-200";
+              case "rejection":
+                return "bg-red-100 text-red-200";
+              default:
+                return "bg-gray-100 text-gray-200";
+            }
+          },
+
+          getActivityTypeLabel(type) {
+            switch (type) {
+              case "signal":
+                return "SIGNAL";
+              case "ai_decision":
+                return "AI DECISION";
+              case "risk_approved":
+                return "RISK APPROVED";
+              case "risk_rejected":
+                return "RISK REJECTED";
+              case "execution":
+                return "EXECUTION";
+              case "exit":
+                return "EXIT";
+              case "rejection":
+                return "REJECTION";
+              default:
+                return type.toUpperCase();
+            }
+          },
+
+          // Demo data methods (simplified versions)
+          showDemoOverviewData() {
+            document.getElementById("portfolio-value").textContent =
+              "$102,481.32";
+            document.getElementById("portfolio-change").textContent = "2.48%";
+            document.getElementById("portfolio-change").className =
+              "text-sm text-green-400";
+
+            document.getElementById("today-pnl").textContent = "$842.17";
+            document.getElementById("today-pnl-percent").textContent = "0.82%";
+            document.getElementById("today-pnl-percent").className =
+              "text-sm text-green-400";
+
+            document.getElementById("total-pnl").textContent = "$2,481.32";
+            document.getElementById("total-pnl-percent").textContent = "2.48%";
+            document.getElementById("total-pnl-percent").className =
+              "text-sm text-green-400";
+
+            document.getElementById("drawdown").textContent = "1.80%";
+          },
+
+          showDemoEquityCurve() {
+            if (!equityChartInstance) this.initEquityChart();
+            if (!equityChartInstance) return;
+
+            const labels = [];
+            const data = [];
+            let equity = 100000;
+
+            for (let i = 29; i >= 0; i--) {
+              const date = new Date();
+              date.setDate(date.getDate() - i);
+              labels.push(
+                date.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })
+              );
+              equity += (Math.random() - 0.5) * 200;
+              data.push(Number(equity.toFixed(2)));
+            }
+
+            equityChartInstance.data.labels = labels.slice();
+            equityChartInstance.data.datasets[0].data = data.slice();
+            equityChartInstance.update("none");
+          },
+
+          showDemoLiveActivity() {
+            const activities = [
+              {
+                timestamp: new Date().toISOString(),
+                underlying: "NVDA",
+                event_type: "execution",
+                description: "ORDER FILLED: NVDA 260925 C 180",
+                status: "success",
+                confidence: 0.84,
+              },
+              {
+                timestamp: new Date(Date.now() - 30000).toISOString(), // 30 seconds ago
+                underlying: "NVDA",
+                event_type: "ai_decision",
+                description: "AI DECISION: BUY NVDA",
+                status: "info",
+                confidence: 0.84,
+              },
+            ];
+
+            const activityFeed = document.getElementById("activity-feed");
+            activityFeed.innerHTML = activities
+              .map((activity) => {
+                const time = new Date(activity.timestamp).toLocaleTimeString(
+                  [],
+                  { hour: "2-digit", minute: "2-digit" }
+                );
+                const typeClass = this.getActivityTypeClass(
+                  activity.event_type
+                );
+                const typeLabel = this.getActivityTypeLabel(
+                  activity.event_type
+                );
+
+                return `
+                            <div class="flex items-start space-x-3 py-2 border-b border-gray-700 last:border-b-0">
+                                <div class="text-xs text-gray-500 whitespace-nowrap">${time}</div>
+                                <div class="flex-1 space-y-1">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="px-2 py-0.5 text-xs rounded-full ${typeClass}">${typeLabel}</span>
+                                        <span class="text-xs text-gray-400">${
+                                          activity.underlying
+                                        }</span>
+                                    </div>
+                                    <p class="text-sm text-gray-200">${
+                                      activity.description
+                                    }</p>
+                                    ${
+                                      activity.confidence !== undefined
+                                        ? '<div class="text-xs text-gray-500 ml-8">Confidence: ' +
+                                          (activity.confidence * 100).toFixed(
+                                            0
+                                          ) +
+                                          "%</div>"
+                                        : ""
+                                    }
+                                </div>
+                            </div>
+                        `;
+              })
+              .join("");
+          },
+
+          showDemoPositions() {
+            const positions = [
+              {
+                symbol: "NVDA260925C00180000",
+                quantity: 2,
+                side: "buy",
+                entry_price: 4.21,
+                current_price: 4.45,
+                unrealized_pl: 48.0,
+                unrealized_pl_percent: 5.68,
+                contract: "NVDA   260925C00180000",
+              },
+              {
+                symbol: "TSLA260925P00250000",
+                quantity: 1,
+                side: "sell",
+                entry_price: 3.8,
+                current_price: 3.5,
+                unrealized_pl: 30.0,
+                unrealized_pl_percent: 7.89,
+                contract: "TSLA   260925P00250000",
+              },
+            ];
+
+            const tbody = document.getElementById("positions-table-body");
+            tbody.innerHTML = positions
+              .map((pos) => {
+                const pnlClass =
+                  pos.unrealized_pl >= 0 ? "text-green-400" : "text-red-400";
+                return `
+                            <tr class="hover:bg-gray-700">
+                                <td class="px-6 py-3 text-sm font-medium">${
+                                  pos.symbol
+                                }</td>
+                                <td class="px-6 py-3 text-sm font-medium">${pos.contract.trim()}</td>
+                                <td class="px-6 py-3 text-sm font-medium text-${
+                                  pos.side === "buy" ? "green-400" : "red-400"
+                                }">${pos.side.toUpperCase()}</td>
+                                <td class="px-6 py-3 text-sm font-medium">${
+                                  pos.quantity
+                                }</td>
+                                <td class="px-6 py-3 text-sm font-medium">$${pos.entry_price.toFixed(
+                                  2
+                                )}</td>
+                                <td class="px-6 py-3 text-sm font-medium">$${pos.current_price.toFixed(
+                                  2
+                                )}</td>
+                                <td class="px-6 py-3 text-sm font-medium ${pnlClass}">$${pos.unrealized_pl.toFixed(
+                  2
+                )}</td>
+                                <td class="px-6 py-3 text-sm font-medium ${pnlClass}">${pos.unrealized_pl_percent.toFixed(
+                  2
+                )}%</td>
+                                <td class="px-6 py-3 text-sm font-medium">${pos.symbol.slice(
+                                  6,
+                                  12
+                                )}</td>
+                            </tr>
+                        `;
+              })
+              .join("");
+          },
+
+          showDemoTrades() {
+            const trades = [
+              {
+                timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+                symbol: "NVDA260925C00180000",
+                side: "buy",
+                filled_avg_price: 4.21,
+                pnl: 48.0,
+                status: "filled",
+                contract: "NVDA   260925C00180000",
+              },
+              {
+                timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+                symbol: "TSLA260925P00250000",
+                side: "sell",
+                filled_avg_price: 3.8,
+                pnl: 30.0,
+                status: "filled",
+                contract: "TSLA   260925P00250000",
+              },
+            ];
+
+            const tbody = document.getElementById("trades-table-body");
+            tbody.innerHTML = trades
+              .map((trade) => {
+                const time = new Date(trade.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                const pnlClass =
+                  trade.pnl >= 0 ? "text-green-400" : "text-red-400";
+                const actionClass =
+                  trade.side === "buy" ? "text-green-400" : "text-red-400";
+
+                return `
+                            <tr class="hover:bg-gray-700">
+                                <td class="px-6 py-3 text-sm font-medium">${time}</td>
+                                <td class="px-6 py-3 text-sm font-medium">${
+                                  trade.symbol
+                                }</td>
+                                <td class="px-6 py-3 text-sm font-medium">${
+                                  trade.contract || trade.symbol
+                                }</td>
+                                <td class="px-6 py-3 text-sm font-medium">Multi-Factor</td>
+                                <td class="px-6 py-3 text-sm font-medium ${actionClass}">${trade.side.toUpperCase()}</td>
+                                <td class="px-6 py-3 text-sm font-medium">$${trade.filled_avg_price.toFixed(
+                                  2
+                                )}</td>
+                                <td class="px-6 py-3 text-sm font-medium">$${(
+                                  trade.filled_avg_price * 1.1
+                                ).toFixed(2)}</td>
+                                <td class="px-6 py-3 text-sm font-medium ${pnlClass}">$${trade.pnl.toFixed(
+                  2
+                )}</td>
+                                <td class="px-6 py-3 text-sm font-medium">2h 15m</td>
+                                <td class="px-6 py-3 text-sm font-medium text-gray-400">${
+                                  trade.status === "filled"
+                                    ? "Signal executed"
+                                    : "Risk rejected"
+                                }</td>
+                            </tr>
+                        `;
+              })
+              .join("");
+          },
+
+          showDemoRiskSummary() {
+            // Set exposure to 18.4%
+            document.getElementById("exposure-bar").style.width = "46%"; // 18.4/40 * 100
+            document.getElementById("exposure-percent").textContent =
+              "18.4% / 40%";
+
+            // Set daily loss to 0.4%
+            document.getElementById("daily-loss-bar").style.width = "13.3%"; // 0.4/3 * 100
+            document.getElementById("daily-loss-percent").textContent =
+              "0.4% / 3%";
+
+            // Set drawdown to 1.8%
+            document.getElementById("drawdown-bar").style.width = "18%"; // 1.8/10 * 100
+            document.getElementById("drawdown-percent").textContent =
+              "1.8% / 10%";
+          },
+
+          showDemoAgentConfig() {
+            const configContainer = document.querySelector(
+              "[x-show=\"activeTab === 'config'\"] .bg-gray-800.rounded-lg.p-4.border.border-gray-700"
+            );
+            configContainer.innerHTML = `
+                        <h3 class="text-lg font-medium text-white mb-4">AGENT CONFIGURATION</h3>
+                        <div class="text-center py-8 text-gray-500">
+                            Loading configuration...
+                        </div>
+                    `;
+          },
+        };
+      }
+    </script>
+  </body>
+</html>

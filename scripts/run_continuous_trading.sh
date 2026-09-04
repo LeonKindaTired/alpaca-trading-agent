@@ -21,7 +21,8 @@ while true; do
     echo "[$CYCLE_TIME] Starting trading cycle" | tee -a "$LOG_FILE"
 
     # Run the paper trading cycle and append output to log file
-    python -m backend.scripts.run_paper_cycle 2>&1 | tee -a "$LOG_FILE"
+    # Use stdbuf to ensure line-buffered output for real-time console display
+    stdbuf -oL -eL python -m backend.scripts.run_paper_cycle 2>&1 | tee -a "$LOG_FILE"
 
     # Add a separator between cycles
     echo "============================================================" | tee -a "$LOG_FILE"

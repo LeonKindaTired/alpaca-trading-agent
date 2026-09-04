@@ -42,6 +42,20 @@ def main() -> int:
 
     loop = TradingLoop(client, settings)
     result = loop.run_once(submit=not args.dry_run)
+
+    # Print summary of what was considered and what was done
+    signals_considered = len(result.signals)
+    signals_approved = sum(1 for action in result.actions if action.get("approved", False))
+    orders_submitted = sum(1 for action in result.actions if "order" in action and action["order"] is not None)
+
+    print(f"\n=== TRADING CYCLE SUMMARY ===")
+    print(f"Signals considered: {signals_considered}")
+    print(f"Signals approved: {signals_approved}")
+    print(f"Orders submitted: {orders_submitted}")
+    if signals_considered > 0:
+        print(f"Approval rate: {signals_approved/signals_considered*100:.1f}%")
+    print("=============================\n")
+
     print(json.dumps({"account": result.account, "actions": result.actions}, default=str, indent=2))
     return 0
 

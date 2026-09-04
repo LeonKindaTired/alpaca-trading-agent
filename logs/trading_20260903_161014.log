@@ -1,0 +1,458 @@
+C:\Users\user\alpaca-trading-agent\backend\app\ai\gemini_ai.py:7: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+2026-09-03 16:10:20,621 INFO [agent] Connected. equity=99761.85 status=AccountStatus.ACTIVE
+2026-09-03 16:10:21,312 INFO [agent] SPY quote bid=766.65 ask=766.75
+2026-09-03 16:10:21,625 INFO [agent] Account equity=99761.85 buying_power=395951.40 positions=3 trading_enabled=True
+2026-09-03 16:10:21,625 INFO [agent] Reset daily starting equity to 99761.85 for 2026-09-03
+2026-09-03 16:10:21,797 INFO [agent] About to generate signals
+2026-09-03 16:10:21,797 INFO [agent] generate_signals called
+2026-09-03 16:10:21,947 INFO [agent] _generate_signal_for_symbol called for SPY
+2026-09-03 16:10:22,234 INFO [agent] SPY: price=766.7
+2026-09-03 16:10:22,234 INFO [agent] SPY: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:10:22,234 INFO [agent] SPY: score 39.0 < minimum 70
+2026-09-03 16:10:22,234 INFO [agent] _generate_signal_for_symbol called for QQQ
+2026-09-03 16:10:22,529 INFO [agent] QQQ: price=709.835
+2026-09-03 16:10:22,530 INFO [agent] QQQ: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 41.0/100
+2026-09-03 16:10:22,530 INFO [agent] QQQ: score 41.0 < minimum 70
+2026-09-03 16:10:22,530 INFO [agent] _generate_signal_for_symbol called for IWM
+2026-09-03 16:10:22,820 INFO [agent] IWM: price=294.80499999999995
+2026-09-03 16:10:22,821 INFO [agent] IWM: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 41.0/100
+2026-09-03 16:10:22,821 INFO [agent] IWM: score 41.0 < minimum 70
+2026-09-03 16:10:22,821 INFO [agent] _generate_signal_for_symbol called for DIA
+2026-09-03 16:10:23,097 INFO [agent] DIA: price=533.0
+2026-09-03 16:10:23,098 INFO [agent] DIA: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:10:23,098 INFO [agent] DIA: score 39.0 < minimum 70
+2026-09-03 16:10:23,098 INFO [agent] _generate_signal_for_symbol called for EFA
+2026-09-03 16:10:23,390 INFO [agent] EFA: price=106.605
+2026-09-03 16:10:23,390 INFO [agent] EFA: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:10:23,391 INFO [agent] EFA: score 39.0 < minimum 70
+2026-09-03 16:10:23,391 INFO [agent] _generate_signal_for_symbol called for EEM
+2026-09-03 16:10:23,681 INFO [agent] EEM: price=67.07
+2026-09-03 16:10:23,681 INFO [agent] EEM: scores - Trend: 8.0/25, Momentum: 8.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 60.0/100
+2026-09-03 16:10:23,681 INFO [agent] EEM: score 60.0 < minimum 70
+2026-09-03 16:10:23,681 INFO [agent] _generate_signal_for_symbol called for GLD
+2026-09-03 16:10:23,957 INFO [agent] GLD: price=407.76
+2026-09-03 16:10:23,957 INFO [agent] GLD: scores - Trend: 0.0/25, Momentum: 8.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 52.0/100
+2026-09-03 16:10:23,957 INFO [agent] GLD: score 52.0 < minimum 70
+2026-09-03 16:10:23,957 INFO [agent] _generate_signal_for_symbol called for SLV
+2026-09-03 16:10:24,231 INFO [agent] SLV: price=59.585
+2026-09-03 16:10:24,231 INFO [agent] SLV: scores - Trend: 0.0/25, Momentum: 8.0/20, RS: 12.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 53.0/100
+2026-09-03 16:10:24,232 INFO [agent] SLV: score 53.0 < minimum 70
+2026-09-03 16:10:24,232 INFO [agent] _generate_signal_for_symbol called for TLT
+2026-09-03 16:10:24,512 INFO [agent] TLT: price=82.34
+2026-09-03 16:10:24,513 INFO [agent] TLT: scores - Trend: 0.0/25, Momentum: 3.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 42.0/100
+2026-09-03 16:10:24,513 INFO [agent] TLT: score 42.0 < minimum 70
+2026-09-03 16:10:24,513 INFO [agent] _generate_signal_for_symbol called for IEF
+2026-09-03 16:10:24,802 INFO [agent] IEF: price=92.485
+2026-09-03 16:10:24,802 INFO [agent] IEF: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 5.0/10, Regime: 15.0/20, Total: 36.0/100
+2026-09-03 16:10:24,802 INFO [agent] IEF: score 36.0 < minimum 70
+2026-09-03 16:10:24,803 INFO [agent] _generate_signal_for_symbol called for HYG
+2026-09-03 16:10:25,081 INFO [agent] HYG: price=38.34
+2026-09-03 16:10:25,082 INFO [agent] HYG: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 5.0/10, Regime: 15.0/20, Total: 36.0/100
+2026-09-03 16:10:25,082 INFO [agent] HYG: score 36.0 < minimum 70
+2026-09-03 16:10:25,082 INFO [agent] _generate_signal_for_symbol called for LQD
+2026-09-03 16:10:25,363 INFO [agent] LQD: price=52.62
+2026-09-03 16:10:25,363 INFO [agent] LQD: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 5.0/10, Regime: 15.0/20, Total: 36.0/100
+2026-09-03 16:10:25,363 INFO [agent] LQD: score 36.0 < minimum 70
+2026-09-03 16:10:25,363 INFO [agent] _generate_signal_for_symbol called for USO
+2026-09-03 16:10:25,641 INFO [agent] USO: price=142.645
+2026-09-03 16:10:25,641 INFO [agent] USO: scores - Trend: 8.0/25, Momentum: 15.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 69.0/100
+2026-09-03 16:10:25,641 INFO [agent] USO: score 69.0 < minimum 70
+2026-09-03 16:10:25,641 INFO [agent] _generate_signal_for_symbol called for XLF
+2026-09-03 16:10:25,923 INFO [agent] XLF: price=57.644999999999996
+2026-09-03 16:10:25,923 INFO [agent] XLF: scores - Trend: 0.0/25, Momentum: 3.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 44.0/100
+2026-09-03 16:10:25,923 INFO [agent] XLF: score 44.0 < minimum 70
+2026-09-03 16:10:25,923 INFO [agent] _generate_signal_for_symbol called for XLK
+2026-09-03 16:10:26,238 INFO [agent] XLK: price=88.89
+2026-09-03 16:10:26,239 INFO [agent] XLK: scores - Trend: 0.0/25, Momentum: 4.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 43.0/100
+2026-09-03 16:10:26,239 INFO [agent] XLK: score 43.0 < minimum 70
+2026-09-03 16:10:26,239 INFO [agent] _generate_signal_for_symbol called for XLE
+2026-09-03 16:10:26,520 INFO [agent] XLE: price=31.555
+2026-09-03 16:10:26,520 INFO [agent] XLE: scores - Trend: 0.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 56.0/100
+2026-09-03 16:10:26,520 INFO [agent] XLE: score 56.0 < minimum 70
+2026-09-03 16:10:26,520 INFO [agent] _generate_signal_for_symbol called for XLI
+2026-09-03 16:10:26,809 INFO [agent] XLI: price=83.965
+2026-09-03 16:10:26,809 INFO [agent] XLI: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 0.0/15, RSI: 4.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 29.0/100
+2026-09-03 16:10:26,809 INFO [agent] XLI: score 29.0 < minimum 70
+2026-09-03 16:10:26,809 INFO [agent] _generate_signal_for_symbol called for XLV
+2026-09-03 16:10:27,107 INFO [agent] XLV: price=173.34
+2026-09-03 16:10:27,107 INFO [agent] XLV: scores - Trend: 8.0/25, Momentum: 8.0/20, RS: 12.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 61.0/100
+2026-09-03 16:10:27,107 INFO [agent] XLV: score 61.0 < minimum 70
+2026-09-03 16:10:27,107 INFO [agent] _generate_signal_for_symbol called for XLY
+2026-09-03 16:10:27,416 INFO [agent] XLY: price=55.545
+2026-09-03 16:10:27,416 INFO [agent] XLY: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 3.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 38.0/100
+2026-09-03 16:10:27,416 INFO [agent] XLY: score 38.0 < minimum 70
+2026-09-03 16:10:27,416 INFO [agent] _generate_signal_for_symbol called for XLP
+2026-09-03 16:10:27,709 INFO [agent] XLP: price=41.37
+2026-09-03 16:10:27,709 INFO [agent] XLP: scores - Trend: 0.0/25, Momentum: 4.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 45.0/100
+2026-09-03 16:10:27,709 INFO [agent] XLP: score 45.0 < minimum 70
+2026-09-03 16:10:27,709 INFO [agent] _generate_signal_for_symbol called for XLU
+2026-09-03 16:10:27,986 INFO [agent] XLU: price=42.489999999999995
+2026-09-03 16:10:27,986 INFO [agent] XLU: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 41.0/100
+2026-09-03 16:10:27,987 INFO [agent] XLU: score 41.0 < minimum 70
+2026-09-03 16:10:27,987 INFO [agent] _generate_signal_for_symbol called for XLB
+2026-09-03 16:10:28,270 INFO [agent] XLB: price=26.475
+2026-09-03 16:10:28,270 INFO [agent] XLB: scores - Trend: 0.0/25, Momentum: 6.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 47.0/100
+2026-09-03 16:10:28,270 INFO [agent] XLB: score 47.0 < minimum 70
+2026-09-03 16:10:28,270 INFO [agent] _generate_signal_for_symbol called for XLC
+2026-09-03 16:10:28,560 INFO [agent] XLC: price=112.05
+2026-09-03 16:10:28,560 INFO [agent] XLC: scores - Trend: 8.0/25, Momentum: 4.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 56.0/100
+2026-09-03 16:10:28,560 INFO [agent] XLC: score 56.0 < minimum 70
+2026-09-03 16:10:28,560 INFO [agent] _generate_signal_for_symbol called for SMH
+2026-09-03 16:10:28,842 INFO [agent] SMH: price=550.77
+2026-09-03 16:10:28,842 INFO [agent] SMH: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 3.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 38.0/100
+2026-09-03 16:10:28,842 INFO [agent] SMH: score 38.0 < minimum 70
+2026-09-03 16:10:28,842 INFO [agent] _generate_signal_for_symbol called for SOXX
+2026-09-03 16:10:29,147 INFO [agent] SOXX: price=503.385
+2026-09-03 16:10:29,148 INFO [agent] SOXX: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 32.0/100
+2026-09-03 16:10:29,148 INFO [agent] SOXX: score 32.0 < minimum 70
+2026-09-03 16:10:29,148 INFO [agent] _generate_signal_for_symbol called for IGV
+2026-09-03 16:10:29,441 INFO [agent] IGV: price=102.79
+2026-09-03 16:10:29,441 INFO [agent] IGV: scores - Trend: 0.0/25, Momentum: 6.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 50.0/100
+2026-09-03 16:10:29,441 INFO [agent] IGV: score 50.0 < minimum 70
+2026-09-03 16:10:29,441 INFO [agent] _generate_signal_for_symbol called for XBI
+2026-09-03 16:10:29,734 INFO [agent] XBI: price=80.14
+2026-09-03 16:10:29,735 INFO [agent] XBI: scores - Trend: 0.0/25, Momentum: 10.0/20, RS: 12.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 10.0/20, Total: 50.0/100
+2026-09-03 16:10:29,735 INFO [agent] XBI: score 50.0 < minimum 70
+2026-09-03 16:10:29,735 INFO [agent] _generate_signal_for_symbol called for XOP
+2026-09-03 16:10:30,015 INFO [agent] XOP: price=193.305
+2026-09-03 16:10:30,015 INFO [agent] XOP: scores - Trend: 8.0/25, Momentum: 12.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:10:30,015 INFO [agent] XOP: score 66.0 < minimum 70
+2026-09-03 16:10:30,015 INFO [agent] _generate_signal_for_symbol called for OIH
+2026-09-03 16:10:30,302 INFO [agent] OIH: price=212.05
+2026-09-03 16:10:30,302 INFO [agent] OIH: scores - Trend: 0.0/25, Momentum: 18.0/20, RS: 15.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:10:30,302 INFO [agent] OIH: score 66.0 < minimum 70
+2026-09-03 16:10:30,302 INFO [agent] _generate_signal_for_symbol called for KRE
+2026-09-03 16:10:30,579 INFO [agent] KRE: price=36.03
+2026-09-03 16:10:30,579 INFO [agent] KRE: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 34.0/100
+2026-09-03 16:10:30,579 INFO [agent] KRE: score 34.0 < minimum 70
+2026-09-03 16:10:30,579 INFO [agent] _generate_signal_for_symbol called for KBE
+2026-09-03 16:10:30,875 INFO [agent] KBE: price=68.61
+2026-09-03 16:10:30,875 INFO [agent] KBE: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 34.0/100
+2026-09-03 16:10:30,875 INFO [agent] KBE: score 34.0 < minimum 70
+2026-09-03 16:10:30,875 INFO [agent] _generate_signal_for_symbol called for XRT
+2026-09-03 16:10:31,165 INFO [agent] XRT: price=41.925
+2026-09-03 16:10:31,165 INFO [agent] XRT: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 3.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 38.0/100
+2026-09-03 16:10:31,165 INFO [agent] XRT: score 38.0 < minimum 70
+2026-09-03 16:10:31,165 INFO [agent] _generate_signal_for_symbol called for IYR
+2026-09-03 16:10:31,476 INFO [agent] IYR: price=102.1
+2026-09-03 16:10:31,476 INFO [agent] IYR: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 32.0/100
+2026-09-03 16:10:31,476 INFO [agent] IYR: score 32.0 < minimum 70
+2026-09-03 16:10:31,476 INFO [agent] _generate_signal_for_symbol called for VNQ
+2026-09-03 16:10:31,763 INFO [agent] VNQ: price=46.54
+2026-09-03 16:10:31,763 INFO [agent] VNQ: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 32.0/100
+2026-09-03 16:10:31,763 INFO [agent] VNQ: score 32.0 < minimum 70
+2026-09-03 16:10:31,763 INFO [agent] _generate_signal_for_symbol called for ITB
+2026-09-03 16:10:32,038 INFO [agent] ITB: price=93.145
+2026-09-03 16:10:32,038 INFO [agent] ITB: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 0.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 35.0/100
+2026-09-03 16:10:32,038 INFO [agent] ITB: score 35.0 < minimum 70
+2026-09-03 16:10:32,038 INFO [agent] _generate_signal_for_symbol called for XHB
+2026-09-03 16:10:32,322 INFO [agent] XHB: price=101.37
+2026-09-03 16:10:32,322 INFO [agent] XHB: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 0.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 31.0/100
+2026-09-03 16:10:32,322 INFO [agent] XHB: score 31.0 < minimum 70
+2026-09-03 16:10:32,322 INFO [agent] _generate_signal_for_symbol called for GDX
+2026-09-03 16:10:32,609 INFO [agent] GDX: price=99.59
+2026-09-03 16:10:32,609 INFO [agent] GDX: scores - Trend: 8.0/25, Momentum: 12.0/20, RS: 15.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:10:32,609 INFO [agent] GDX: score 66.0 < minimum 70
+2026-09-03 16:10:32,609 INFO [agent] _generate_signal_for_symbol called for GDXJ
+2026-09-03 16:10:32,889 INFO [agent] GDXJ: price=132.68
+2026-09-03 16:10:32,890 INFO [agent] GDXJ: scores - Trend: 8.0/25, Momentum: 12.0/20, RS: 15.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:10:32,890 INFO [agent] GDXJ: score 66.0 < minimum 70
+2026-09-03 16:10:32,890 INFO [agent] _generate_signal_for_symbol called for TAN
+2026-09-03 16:10:33,186 INFO [agent] TAN: price=47.745000000000005
+2026-09-03 16:10:33,186 INFO [agent] TAN: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 0.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 31.0/100
+2026-09-03 16:10:33,186 INFO [agent] TAN: score 31.0 < minimum 70
+2026-09-03 16:10:33,186 INFO [agent] _generate_signal_for_symbol called for ARKK
+2026-09-03 16:10:33,467 INFO [agent] ARKK: price=40.215
+2026-09-03 16:10:33,467 INFO [agent] ARKK: scores - Trend: 0.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 10.0/20, Total: 55.0/100
+2026-09-03 16:10:33,467 INFO [agent] ARKK: score 55.0 < minimum 70
+2026-09-03 16:10:33,467 INFO [agent] _generate_signal_for_symbol called for EWJ
+2026-09-03 16:10:33,750 INFO [agent] EWJ: price=97.31
+2026-09-03 16:10:33,750 INFO [agent] EWJ: scores - Trend: 8.0/25, Momentum: 5.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 52.0/100
+2026-09-03 16:10:33,750 INFO [agent] EWJ: score 52.0 < minimum 70
+2026-09-03 16:10:33,750 INFO [agent] _generate_signal_for_symbol called for EWG
+2026-09-03 16:10:34,035 INFO [agent] EWG: price=44.185
+2026-09-03 16:10:34,035 INFO [agent] EWG: scores - Trend: 8.0/25, Momentum: 3.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 50.0/100
+2026-09-03 16:10:34,035 INFO [agent] EWG: score 50.0 < minimum 70
+2026-09-03 16:10:34,035 INFO [agent] _generate_signal_for_symbol called for EWZ
+2026-09-03 16:10:34,320 INFO [agent] EWZ: price=38.480000000000004
+2026-09-03 16:10:34,320 INFO [agent] EWZ: scores - Trend: 8.0/25, Momentum: 11.0/20, RS: 12.0/15, RSI: 4.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 60.0/100
+2026-09-03 16:10:34,320 INFO [agent] EWZ: score 60.0 < minimum 70
+2026-09-03 16:10:34,320 INFO [agent] _generate_signal_for_symbol called for FXI
+2026-09-03 16:10:34,613 INFO [agent] FXI: price=35.55
+2026-09-03 16:10:34,613 INFO [agent] FXI: scores - Trend: 8.0/25, Momentum: 7.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 54.0/100
+2026-09-03 16:10:34,613 INFO [agent] FXI: score 54.0 < minimum 70
+2026-09-03 16:10:34,613 INFO [agent] _generate_signal_for_symbol called for INDA
+2026-09-03 16:10:34,905 INFO [agent] INDA: price=49.93
+2026-09-03 16:10:34,905 INFO [agent] INDA: scores - Trend: 8.0/25, Momentum: 5.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 52.0/100
+2026-09-03 16:10:34,905 INFO [agent] INDA: score 52.0 < minimum 70
+2026-09-03 16:10:34,905 INFO [agent] _generate_signal_for_symbol called for ACWI
+2026-09-03 16:10:35,182 INFO [agent] ACWI: price=159.64499999999998
+2026-09-03 16:10:35,182 INFO [agent] ACWI: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:10:35,182 INFO [agent] ACWI: score 39.0 < minimum 70
+2026-09-03 16:10:35,183 INFO [agent] _generate_signal_for_symbol called for VT
+2026-09-03 16:10:35,482 INFO [agent] VT: price=77.245
+2026-09-03 16:10:35,483 INFO [agent] VT: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:10:35,483 INFO [agent] VT: score 39.0 < minimum 70
+2026-09-03 16:10:35,483 INFO [agent] _generate_signal_for_symbol called for DBC
+2026-09-03 16:10:35,763 INFO [agent] DBC: price=31.75
+2026-09-03 16:10:35,763 INFO [agent] DBC: scores - Trend: 8.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 64.0/100
+2026-09-03 16:10:35,763 INFO [agent] DBC: score 64.0 < minimum 70
+2026-09-03 16:10:35,763 INFO [agent] _generate_signal_for_symbol called for UNG
+2026-09-03 16:10:36,041 INFO [agent] UNG: price=10.735
+2026-09-03 16:10:36,041 INFO [agent] UNG: scores - Trend: 8.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 64.0/100
+2026-09-03 16:10:36,041 INFO [agent] UNG: score 64.0 < minimum 70
+2026-09-03 16:10:36,041 INFO [agent] _generate_signal_for_symbol called for DBA
+2026-09-03 16:10:36,340 INFO [agent] DBA: price=29.415
+2026-09-03 16:10:36,340 INFO [agent] DBA: scores - Trend: 8.0/25, Momentum: 8.0/20, RS: 12.0/15, RSI: 4.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 55.0/100
+2026-09-03 16:10:36,340 INFO [agent] DBA: score 55.0 < minimum 70
+2026-09-03 16:10:36,340 INFO [agent] Generated 0 signal(s)
+{
+  "account": {
+    "equity": 99761.85,
+    "cash": 98987.85,
+    "buying_power": 395951.4,
+    "portfolio_value": 99761.85,
+    "last_equity": 99755.85,
+    "status": "AccountStatus.ACTIVE",
+    "options_approved_level": 3,
+    "trading_blocked": false
+  },
+  "actions": []
+}
+C:\Users\user\alpaca-trading-agent\backend\app\ai\gemini_ai.py:7: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+2026-09-03 16:11:39,366 INFO [agent] Connected. equity=99761.85 status=AccountStatus.ACTIVE
+2026-09-03 16:11:39,996 INFO [agent] SPY quote bid=766.65 ask=766.75
+2026-09-03 16:11:40,310 INFO [agent] Account equity=99761.85 buying_power=395951.40 positions=3 trading_enabled=True
+2026-09-03 16:11:40,310 INFO [agent] Reset daily starting equity to 99761.85 for 2026-09-03
+2026-09-03 16:11:40,489 INFO [agent] About to generate signals
+2026-09-03 16:11:40,489 INFO [agent] generate_signals called
+2026-09-03 16:11:40,630 INFO [agent] _generate_signal_for_symbol called for SPY
+2026-09-03 16:11:40,920 INFO [agent] SPY: price=766.7
+2026-09-03 16:11:40,920 INFO [agent] SPY: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:11:40,921 INFO [agent] SPY: score 39.0 < minimum 70
+2026-09-03 16:11:40,921 INFO [agent] _generate_signal_for_symbol called for QQQ
+2026-09-03 16:11:41,201 INFO [agent] QQQ: price=710.14
+2026-09-03 16:11:41,201 INFO [agent] QQQ: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 41.0/100
+2026-09-03 16:11:41,201 INFO [agent] QQQ: score 41.0 < minimum 70
+2026-09-03 16:11:41,201 INFO [agent] _generate_signal_for_symbol called for IWM
+2026-09-03 16:11:41,484 INFO [agent] IWM: price=294.80499999999995
+2026-09-03 16:11:41,484 INFO [agent] IWM: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 41.0/100
+2026-09-03 16:11:41,484 INFO [agent] IWM: score 41.0 < minimum 70
+2026-09-03 16:11:41,484 INFO [agent] _generate_signal_for_symbol called for DIA
+2026-09-03 16:11:41,787 INFO [agent] DIA: price=533.0
+2026-09-03 16:11:41,787 INFO [agent] DIA: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:11:41,787 INFO [agent] DIA: score 39.0 < minimum 70
+2026-09-03 16:11:41,787 INFO [agent] _generate_signal_for_symbol called for EFA
+2026-09-03 16:11:42,065 INFO [agent] EFA: price=106.605
+2026-09-03 16:11:42,066 INFO [agent] EFA: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:11:42,066 INFO [agent] EFA: score 39.0 < minimum 70
+2026-09-03 16:11:42,066 INFO [agent] _generate_signal_for_symbol called for EEM
+2026-09-03 16:11:42,361 INFO [agent] EEM: price=67.085
+2026-09-03 16:11:42,361 INFO [agent] EEM: scores - Trend: 8.0/25, Momentum: 8.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 60.0/100
+2026-09-03 16:11:42,361 INFO [agent] EEM: score 60.0 < minimum 70
+2026-09-03 16:11:42,361 INFO [agent] _generate_signal_for_symbol called for GLD
+2026-09-03 16:11:42,681 INFO [agent] GLD: price=407.76
+2026-09-03 16:11:42,681 INFO [agent] GLD: scores - Trend: 0.0/25, Momentum: 8.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 52.0/100
+2026-09-03 16:11:42,681 INFO [agent] GLD: score 52.0 < minimum 70
+2026-09-03 16:11:42,681 INFO [agent] _generate_signal_for_symbol called for SLV
+2026-09-03 16:11:42,961 INFO [agent] SLV: price=59.585
+2026-09-03 16:11:42,961 INFO [agent] SLV: scores - Trend: 0.0/25, Momentum: 8.0/20, RS: 12.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 53.0/100
+2026-09-03 16:11:42,961 INFO [agent] SLV: score 53.0 < minimum 70
+2026-09-03 16:11:42,961 INFO [agent] _generate_signal_for_symbol called for TLT
+2026-09-03 16:11:43,246 INFO [agent] TLT: price=82.28999999999999
+2026-09-03 16:11:43,246 INFO [agent] TLT: scores - Trend: 0.0/25, Momentum: 3.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 42.0/100
+2026-09-03 16:11:43,246 INFO [agent] TLT: score 42.0 < minimum 70
+2026-09-03 16:11:43,246 INFO [agent] _generate_signal_for_symbol called for IEF
+2026-09-03 16:11:43,532 INFO [agent] IEF: price=92.465
+2026-09-03 16:11:43,533 INFO [agent] IEF: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 5.0/10, Regime: 15.0/20, Total: 36.0/100
+2026-09-03 16:11:43,533 INFO [agent] IEF: score 36.0 < minimum 70
+2026-09-03 16:11:43,533 INFO [agent] _generate_signal_for_symbol called for HYG
+2026-09-03 16:11:43,855 INFO [agent] HYG: price=38.34
+2026-09-03 16:11:43,855 INFO [agent] HYG: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 5.0/10, Regime: 15.0/20, Total: 36.0/100
+2026-09-03 16:11:43,855 INFO [agent] HYG: score 36.0 < minimum 70
+2026-09-03 16:11:43,855 INFO [agent] _generate_signal_for_symbol called for LQD
+2026-09-03 16:11:44,142 INFO [agent] LQD: price=52.62
+2026-09-03 16:11:44,142 INFO [agent] LQD: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 5.0/10, Regime: 15.0/20, Total: 36.0/100
+2026-09-03 16:11:44,142 INFO [agent] LQD: score 36.0 < minimum 70
+2026-09-03 16:11:44,142 INFO [agent] _generate_signal_for_symbol called for USO
+2026-09-03 16:11:44,431 INFO [agent] USO: price=142.645
+2026-09-03 16:11:44,431 INFO [agent] USO: scores - Trend: 8.0/25, Momentum: 15.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 69.0/100
+2026-09-03 16:11:44,431 INFO [agent] USO: score 69.0 < minimum 70
+2026-09-03 16:11:44,431 INFO [agent] _generate_signal_for_symbol called for XLF
+2026-09-03 16:11:44,709 INFO [agent] XLF: price=57.644999999999996
+2026-09-03 16:11:44,709 INFO [agent] XLF: scores - Trend: 0.0/25, Momentum: 3.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 44.0/100
+2026-09-03 16:11:44,709 INFO [agent] XLF: score 44.0 < minimum 70
+2026-09-03 16:11:44,709 INFO [agent] _generate_signal_for_symbol called for XLK
+2026-09-03 16:11:44,994 INFO [agent] XLK: price=88.89
+2026-09-03 16:11:44,994 INFO [agent] XLK: scores - Trend: 0.0/25, Momentum: 4.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 43.0/100
+2026-09-03 16:11:44,994 INFO [agent] XLK: score 43.0 < minimum 70
+2026-09-03 16:11:44,994 INFO [agent] _generate_signal_for_symbol called for XLE
+2026-09-03 16:11:45,287 INFO [agent] XLE: price=31.555
+2026-09-03 16:11:45,287 INFO [agent] XLE: scores - Trend: 0.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 56.0/100
+2026-09-03 16:11:45,288 INFO [agent] XLE: score 56.0 < minimum 70
+2026-09-03 16:11:45,288 INFO [agent] _generate_signal_for_symbol called for XLI
+2026-09-03 16:11:45,573 INFO [agent] XLI: price=83.965
+2026-09-03 16:11:45,573 INFO [agent] XLI: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 0.0/15, RSI: 4.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 29.0/100
+2026-09-03 16:11:45,573 INFO [agent] XLI: score 29.0 < minimum 70
+2026-09-03 16:11:45,573 INFO [agent] _generate_signal_for_symbol called for XLV
+2026-09-03 16:11:45,854 INFO [agent] XLV: price=173.34
+2026-09-03 16:11:45,854 INFO [agent] XLV: scores - Trend: 8.0/25, Momentum: 8.0/20, RS: 12.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 61.0/100
+2026-09-03 16:11:45,854 INFO [agent] XLV: score 61.0 < minimum 70
+2026-09-03 16:11:45,854 INFO [agent] _generate_signal_for_symbol called for XLY
+2026-09-03 16:11:46,137 INFO [agent] XLY: price=55.545
+2026-09-03 16:11:46,138 INFO [agent] XLY: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 3.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 38.0/100
+2026-09-03 16:11:46,138 INFO [agent] XLY: score 38.0 < minimum 70
+2026-09-03 16:11:46,138 INFO [agent] _generate_signal_for_symbol called for XLP
+2026-09-03 16:11:46,415 INFO [agent] XLP: price=41.37
+2026-09-03 16:11:46,415 INFO [agent] XLP: scores - Trend: 0.0/25, Momentum: 4.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 45.0/100
+2026-09-03 16:11:46,415 INFO [agent] XLP: score 45.0 < minimum 70
+2026-09-03 16:11:46,415 INFO [agent] _generate_signal_for_symbol called for XLU
+2026-09-03 16:11:46,765 INFO [agent] XLU: price=42.489999999999995
+2026-09-03 16:11:46,765 INFO [agent] XLU: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 41.0/100
+2026-09-03 16:11:46,765 INFO [agent] XLU: score 41.0 < minimum 70
+2026-09-03 16:11:46,765 INFO [agent] _generate_signal_for_symbol called for XLB
+2026-09-03 16:11:47,115 INFO [agent] XLB: price=26.475
+2026-09-03 16:11:47,116 INFO [agent] XLB: scores - Trend: 0.0/25, Momentum: 6.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 47.0/100
+2026-09-03 16:11:47,116 INFO [agent] XLB: score 47.0 < minimum 70
+2026-09-03 16:11:47,116 INFO [agent] _generate_signal_for_symbol called for XLC
+2026-09-03 16:11:47,436 INFO [agent] XLC: price=112.05
+2026-09-03 16:11:47,436 INFO [agent] XLC: scores - Trend: 8.0/25, Momentum: 4.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 56.0/100
+2026-09-03 16:11:47,436 INFO [agent] XLC: score 56.0 < minimum 70
+2026-09-03 16:11:47,436 INFO [agent] _generate_signal_for_symbol called for SMH
+2026-09-03 16:11:47,718 INFO [agent] SMH: price=550.77
+2026-09-03 16:11:47,718 INFO [agent] SMH: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 3.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 38.0/100
+2026-09-03 16:11:47,718 INFO [agent] SMH: score 38.0 < minimum 70
+2026-09-03 16:11:47,718 INFO [agent] _generate_signal_for_symbol called for SOXX
+2026-09-03 16:11:48,037 INFO [agent] SOXX: price=503.385
+2026-09-03 16:11:48,037 INFO [agent] SOXX: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 32.0/100
+2026-09-03 16:11:48,039 INFO [agent] SOXX: score 32.0 < minimum 70
+2026-09-03 16:11:48,039 INFO [agent] _generate_signal_for_symbol called for IGV
+2026-09-03 16:11:48,320 INFO [agent] IGV: price=102.79
+2026-09-03 16:11:48,320 INFO [agent] IGV: scores - Trend: 0.0/25, Momentum: 6.0/20, RS: 9.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 50.0/100
+2026-09-03 16:11:48,320 INFO [agent] IGV: score 50.0 < minimum 70
+2026-09-03 16:11:48,320 INFO [agent] _generate_signal_for_symbol called for XBI
+2026-09-03 16:11:48,625 INFO [agent] XBI: price=80.14
+2026-09-03 16:11:48,625 INFO [agent] XBI: scores - Trend: 0.0/25, Momentum: 10.0/20, RS: 12.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 10.0/20, Total: 50.0/100
+2026-09-03 16:11:48,625 INFO [agent] XBI: score 50.0 < minimum 70
+2026-09-03 16:11:48,625 INFO [agent] _generate_signal_for_symbol called for XOP
+2026-09-03 16:11:48,919 INFO [agent] XOP: price=193.305
+2026-09-03 16:11:48,919 INFO [agent] XOP: scores - Trend: 8.0/25, Momentum: 12.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:11:48,919 INFO [agent] XOP: score 66.0 < minimum 70
+2026-09-03 16:11:48,919 INFO [agent] _generate_signal_for_symbol called for OIH
+2026-09-03 16:11:49,203 INFO [agent] OIH: price=212.05
+2026-09-03 16:11:49,203 INFO [agent] OIH: scores - Trend: 0.0/25, Momentum: 18.0/20, RS: 15.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:11:49,203 INFO [agent] OIH: score 66.0 < minimum 70
+2026-09-03 16:11:49,203 INFO [agent] _generate_signal_for_symbol called for KRE
+2026-09-03 16:11:49,498 INFO [agent] KRE: price=36.03
+2026-09-03 16:11:49,498 INFO [agent] KRE: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 34.0/100
+2026-09-03 16:11:49,498 INFO [agent] KRE: score 34.0 < minimum 70
+2026-09-03 16:11:49,498 INFO [agent] _generate_signal_for_symbol called for KBE
+2026-09-03 16:11:49,777 INFO [agent] KBE: price=68.61
+2026-09-03 16:11:49,777 INFO [agent] KBE: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 34.0/100
+2026-09-03 16:11:49,777 INFO [agent] KBE: score 34.0 < minimum 70
+2026-09-03 16:11:49,777 INFO [agent] _generate_signal_for_symbol called for XRT
+2026-09-03 16:11:50,072 INFO [agent] XRT: price=41.925
+2026-09-03 16:11:50,072 INFO [agent] XRT: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 3.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 38.0/100
+2026-09-03 16:11:50,072 INFO [agent] XRT: score 38.0 < minimum 70
+2026-09-03 16:11:50,072 INFO [agent] _generate_signal_for_symbol called for IYR
+2026-09-03 16:11:50,355 INFO [agent] IYR: price=102.1
+2026-09-03 16:11:50,355 INFO [agent] IYR: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 32.0/100
+2026-09-03 16:11:50,355 INFO [agent] IYR: score 32.0 < minimum 70
+2026-09-03 16:11:50,355 INFO [agent] _generate_signal_for_symbol called for VNQ
+2026-09-03 16:11:50,641 INFO [agent] VNQ: price=46.54
+2026-09-03 16:11:50,641 INFO [agent] VNQ: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 3.0/15, RSI: 6.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 32.0/100
+2026-09-03 16:11:50,641 INFO [agent] VNQ: score 32.0 < minimum 70
+2026-09-03 16:11:50,641 INFO [agent] _generate_signal_for_symbol called for ITB
+2026-09-03 16:11:50,932 INFO [agent] ITB: price=93.145
+2026-09-03 16:11:50,932 INFO [agent] ITB: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 0.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 35.0/100
+2026-09-03 16:11:50,932 INFO [agent] ITB: score 35.0 < minimum 70
+2026-09-03 16:11:50,932 INFO [agent] _generate_signal_for_symbol called for XHB
+2026-09-03 16:11:51,214 INFO [agent] XHB: price=101.37
+2026-09-03 16:11:51,214 INFO [agent] XHB: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 0.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 31.0/100
+2026-09-03 16:11:51,214 INFO [agent] XHB: score 31.0 < minimum 70
+2026-09-03 16:11:51,214 INFO [agent] _generate_signal_for_symbol called for GDX
+2026-09-03 16:11:51,503 INFO [agent] GDX: price=99.59
+2026-09-03 16:11:51,503 INFO [agent] GDX: scores - Trend: 8.0/25, Momentum: 12.0/20, RS: 15.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:11:51,503 INFO [agent] GDX: score 66.0 < minimum 70
+2026-09-03 16:11:51,503 INFO [agent] _generate_signal_for_symbol called for GDXJ
+2026-09-03 16:11:51,781 INFO [agent] GDXJ: price=132.68
+2026-09-03 16:11:51,781 INFO [agent] GDXJ: scores - Trend: 8.0/25, Momentum: 12.0/20, RS: 15.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 66.0/100
+2026-09-03 16:11:51,782 INFO [agent] GDXJ: score 66.0 < minimum 70
+2026-09-03 16:11:51,782 INFO [agent] _generate_signal_for_symbol called for TAN
+2026-09-03 16:11:52,066 INFO [agent] TAN: price=47.745000000000005
+2026-09-03 16:11:52,066 INFO [agent] TAN: scores - Trend: 0.0/25, Momentum: 0.0/20, RS: 0.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 31.0/100
+2026-09-03 16:11:52,066 INFO [agent] TAN: score 31.0 < minimum 70
+2026-09-03 16:11:52,066 INFO [agent] _generate_signal_for_symbol called for ARKK
+2026-09-03 16:11:52,354 INFO [agent] ARKK: price=40.215
+2026-09-03 16:11:52,354 INFO [agent] ARKK: scores - Trend: 0.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 10.0/10, Volatility: 10.0/10, Regime: 10.0/20, Total: 55.0/100
+2026-09-03 16:11:52,354 INFO [agent] ARKK: score 55.0 < minimum 70
+2026-09-03 16:11:52,354 INFO [agent] _generate_signal_for_symbol called for EWJ
+2026-09-03 16:11:52,652 INFO [agent] EWJ: price=97.31
+2026-09-03 16:11:52,652 INFO [agent] EWJ: scores - Trend: 8.0/25, Momentum: 5.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 52.0/100
+2026-09-03 16:11:52,652 INFO [agent] EWJ: score 52.0 < minimum 70
+2026-09-03 16:11:52,652 INFO [agent] _generate_signal_for_symbol called for EWG
+2026-09-03 16:11:52,937 INFO [agent] EWG: price=44.185
+2026-09-03 16:11:52,937 INFO [agent] EWG: scores - Trend: 8.0/25, Momentum: 3.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 50.0/100
+2026-09-03 16:11:52,937 INFO [agent] EWG: score 50.0 < minimum 70
+2026-09-03 16:11:52,937 INFO [agent] _generate_signal_for_symbol called for EWZ
+2026-09-03 16:11:53,226 INFO [agent] EWZ: price=38.480000000000004
+2026-09-03 16:11:53,226 INFO [agent] EWZ: scores - Trend: 8.0/25, Momentum: 11.0/20, RS: 12.0/15, RSI: 4.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 60.0/100
+2026-09-03 16:11:53,226 INFO [agent] EWZ: score 60.0 < minimum 70
+2026-09-03 16:11:53,226 INFO [agent] _generate_signal_for_symbol called for FXI
+2026-09-03 16:11:53,505 INFO [agent] FXI: price=35.55
+2026-09-03 16:11:53,505 INFO [agent] FXI: scores - Trend: 8.0/25, Momentum: 7.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 54.0/100
+2026-09-03 16:11:53,505 INFO [agent] FXI: score 54.0 < minimum 70
+2026-09-03 16:11:53,505 INFO [agent] _generate_signal_for_symbol called for INDA
+2026-09-03 16:11:53,809 INFO [agent] INDA: price=49.93
+2026-09-03 16:11:53,811 INFO [agent] INDA: scores - Trend: 8.0/25, Momentum: 5.0/20, RS: 6.0/15, RSI: 10.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 52.0/100
+2026-09-03 16:11:53,811 INFO [agent] INDA: score 52.0 < minimum 70
+2026-09-03 16:11:53,811 INFO [agent] _generate_signal_for_symbol called for ACWI
+2026-09-03 16:11:54,105 INFO [agent] ACWI: price=159.64499999999998
+2026-09-03 16:11:54,105 INFO [agent] ACWI: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:11:54,105 INFO [agent] ACWI: score 39.0 < minimum 70
+2026-09-03 16:11:54,105 INFO [agent] _generate_signal_for_symbol called for VT
+2026-09-03 16:11:54,403 INFO [agent] VT: price=77.245
+2026-09-03 16:11:54,403 INFO [agent] VT: scores - Trend: 0.0/25, Momentum: 2.0/20, RS: 6.0/15, RSI: 8.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 39.0/100
+2026-09-03 16:11:54,403 INFO [agent] VT: score 39.0 < minimum 70
+2026-09-03 16:11:54,403 INFO [agent] _generate_signal_for_symbol called for DBC
+2026-09-03 16:11:54,685 INFO [agent] DBC: price=31.75
+2026-09-03 16:11:54,685 INFO [agent] DBC: scores - Trend: 8.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 64.0/100
+2026-09-03 16:11:54,686 INFO [agent] DBC: score 64.0 < minimum 70
+2026-09-03 16:11:54,686 INFO [agent] _generate_signal_for_symbol called for UNG
+2026-09-03 16:11:54,968 INFO [agent] UNG: price=10.725000000000001
+2026-09-03 16:11:54,968 INFO [agent] UNG: scores - Trend: 8.0/25, Momentum: 10.0/20, RS: 15.0/15, RSI: 6.0/10, Volatility: 10.0/10, Regime: 15.0/20, Total: 64.0/100
+2026-09-03 16:11:54,968 INFO [agent] UNG: score 64.0 < minimum 70
+2026-09-03 16:11:54,968 INFO [agent] _generate_signal_for_symbol called for DBA
+2026-09-03 16:11:55,255 INFO [agent] DBA: price=29.415
+2026-09-03 16:11:55,255 INFO [agent] DBA: scores - Trend: 8.0/25, Momentum: 8.0/20, RS: 12.0/15, RSI: 4.0/10, Volatility: 8.0/10, Regime: 15.0/20, Total: 55.0/100
+2026-09-03 16:11:55,256 INFO [agent] DBA: score 55.0 < minimum 70
+2026-09-03 16:11:55,256 INFO [agent] Generated 0 signal(s)
+{
+  "account": {
+    "equity": 99761.85,
+    "cash": 98987.85,
+    "buying_power": 395951.4,
+    "portfolio_value": 99761.85,
+    "last_equity": 99755.85,
+    "status": "AccountStatus.ACTIVE",
+    "options_approved_level": 3,
+    "trading_blocked": false
+  },
+  "actions": []
+}
