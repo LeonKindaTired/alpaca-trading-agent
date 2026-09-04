@@ -2,6 +2,7 @@
 name = "alpaca-trading-agent"
 version = "0.1.0"
 description = "Alpaca Trading Agent"
+requires-python = ">=3.12"
 
 [tool.vercel]
 entrypoint = "backend.app.main:app"
