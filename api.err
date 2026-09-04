@@ -1,8 +1,0 @@
-INFO:     Will watch for changes in these directories: ['C:\\Users\\user\\alpaca-trading-agent']
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [5508] using WatchFiles
-C:\Users\user\alpaca-trading-agent\backend\app\dashboard_api.py:96: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
-  timeframe: str = Query("1M", regex="^(1D|1W|1M|ALL)$"),
-INFO:     Started server process [7696]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
