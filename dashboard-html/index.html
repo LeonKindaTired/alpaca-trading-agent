@@ -1076,10 +1076,10 @@
                   maximumFractionDigits: 2,
                 });
               document.getElementById("portfolio-change").textContent =
-                data.total_pnl_percent.toFixed(2) + "%";
+                data.today_pnl_percent.toFixed(2) + "%";
               document.getElementById("portfolio-change").className =
                 "text-sm " +
-                (data.total_pnl_percent >= 0
+                (data.today_pnl_percent >= 0
                   ? "text-green-400"
                   : "text-red-400");
 
@@ -1403,13 +1403,11 @@
                                     <td class="px-6 py-3 text-sm font-medium">$${trade.filled_avg_price.toFixed(
                                       2
                                     )}</td>
-                                    <td class="px-6 py-3 text-sm font-medium">$${(
-                                      trade.filled_avg_price * 1.1
-                                    ).toFixed(2)}</td>
+                                    <td class="px-6 py-3 text-sm font-medium">N/A</td>
                                     <td class="px-6 py-3 text-sm font-medium ${pnlClass}">$${trade.pnl.toFixed(
                     2
                   )}</td>
-                                    <td class="px-6 py-3 text-sm font-medium">2h 15m</td>
+                                    <td class="px-6 py-3 text-sm font-medium"> — </td>
                                     <td class="px-6 py-3 text-sm font-medium text-gray-400">${
                                       trade.status === "filled"
                                         ? "Signal executed"
@@ -1925,13 +1923,11 @@
                                 <td class="px-6 py-3 text-sm font-medium">$${trade.filled_avg_price.toFixed(
                                   2
                                 )}</td>
-                                <td class="px-6 py-3 text-sm font-medium">$${(
-                                  trade.filled_avg_price * 1.1
-                                ).toFixed(2)}</td>
+                                <td class="px-6 py-3 text-sm font-medium">N/A</td>
                                 <td class="px-6 py-3 text-sm font-medium ${pnlClass}">$${trade.pnl.toFixed(
                   2
                 )}</td>
-                                <td class="px-6 py-3 text-sm font-medium">2h 15m</td>
+                                <td class="px-6 py-3 text-sm font-medium"> — </td>
                                 <td class="px-6 py-3 text-sm font-medium text-gray-400">${
                                   trade.status === "filled"
                                     ? "Signal executed"
